@@ -547,7 +547,6 @@ st.error(
     "Peak Region (%) must be less than Baseload Region Start (%)."
 )
 st.stop()
-
 # =====================================================
 # LOAD DURATION CURVE
 # =====================================================
@@ -573,51 +572,7 @@ fig_ldc.add_trace(
         x=ldc_pct,
         y=ldc,
         mode="lines",
-        name="Demand"
-    )
-)
-
-fig_ldc.add_vline(
-    x=peak_cutoff,
-    line_dash="dot",
-    line_color="red",
-    annotation_text="Peak"
-)
-
-fig_ldc.add_vline(
-    x=baseload_cutoff,
-    line_dash="dot",
-    line_color="green",
-    annotation_text="Baseload"
-)
-
-fig_ldc.add_vrect(
-    x0=0,
-    x1=peak_cutoff,
-    fillcolor="red",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Peak"
-)
-
-fig_ldc.add_vrect(
-    x0=peak_cutoff,
-    x1=baseload_cutoff,
-    fillcolor="yellow",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Mid-Merit"
-)
-
-fig_ldc.add_vrect(
-    x0=baseload_cutoff,
-    x1=100,
-    fillcolor="green",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Baseload"
-)
-
+        name="Demand",
         line=dict(
             color="black",
             width=3
@@ -625,7 +580,6 @@ fig_ldc.add_vrect(
     )
 )
 
-
 fig_ldc.add_vline(
     x=peak_cutoff,
     line_dash="dot",
@@ -640,8 +594,6 @@ fig_ldc.add_vline(
     annotation_text="Baseload"
 )
 
-# Peak Region
-
 fig_ldc.add_vrect(
     x0=0,
     x1=peak_cutoff,
@@ -650,8 +602,6 @@ fig_ldc.add_vrect(
     line_width=0,
     annotation_text="Peak"
 )
-
-# Mid Merit
 
 fig_ldc.add_vrect(
     x0=peak_cutoff,
@@ -662,8 +612,6 @@ fig_ldc.add_vrect(
     annotation_text="Mid-Merit"
 )
 
-# Baseload
-
 fig_ldc.add_vrect(
     x0=baseload_cutoff,
     x1=100,
@@ -673,16 +621,13 @@ fig_ldc.add_vrect(
     annotation_text="Baseload"
 )
 
-
 average_load = total_demand["Value"].mean()
 
 fig_ldc.add_hline(
     y=average_load,
     line_dash="dash",
-    annotation_text=(
-        f"Average Load "
-        f"({average_load:,.2f} MW)"
-    )
+    annotation_text=
+        f"Average Load ({average_load:,.2f} MW)"
 )
 
 fig_ldc.update_layout(
@@ -697,7 +642,6 @@ st.plotly_chart(
     fig_ldc,
     use_container_width=True
 )
-
 
 
 # -----------------------------------------------------
