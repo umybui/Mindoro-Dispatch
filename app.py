@@ -537,6 +537,95 @@ baseload_cutoff = st.sidebar.number_input(
     step=1
 )
 
+# =====================================================
+# VALIDATION
+# =====================================================
+ 
+if peak_cutoff >= baseload_cutoff:
+ 
+st.error(
+    "Peak Region (%) must be less than Baseload Region Start (%)."
+)
+st.stop()
+
+# =====================================================
+# LOAD DURATION CURVE
+# =====================================================
+
+st.subheader("Load Duration Curve")
+
+ldc = (
+    total_demand["Value"]
+    .sort_values(ascending=False)
+    .reset_index(drop=True)
+)
+
+ldc_pct = (
+    (ldc.index + 1)
+    / len(ldc)
+    * 100
+)
+
+fig_ldc = go.Figure()
+
+fig_ldc.add_trace(
+    go.Scatter(
+        x=ldc_pct,
+        y=ldc,
+        mode="lines",
+        name="Demand"
+    )
+)
+
+fig_ldc.add_vline(
+    x=peak_cutoff,
+    line_dash="dot",
+    line_color="red",
+    annotation_text="Peak"
+)
+
+fig_ldc.add_vline(
+    x=baseload_cutoff,
+    line_dash="dot",
+    line_color="green",
+    annotation_text="Baseload"
+)
+
+fig_ldc.add_vrect(
+    x0=0,
+    x1=peak_cutoff,
+    fillcolor="red",
+    opacity=0.08,
+    line_width=0,
+    annotation_text="Peak"
+)
+
+fig_ldc.add_vrect(
+    x0=peak_cutoff,
+    x1=baseload_cutoff,
+    fillcolor="yellow",
+    opacity=0.08,
+    line_width=0,
+    annotation_text="Mid-Merit"
+)
+
+fig_ldc.add_vrect(
+    x0=baseload_cutoff,
+    x1=100,
+    fillcolor="green",
+    opacity=0.08,
+    line_width=0,
+    annotation_text="Baseload"
+)
+
+        line=dict(
+            color="black",
+            width=3
+        )
+    )
+)
+
+
 fig_ldc.add_vline(
     x=peak_cutoff,
     line_dash="dot",
@@ -584,38 +673,6 @@ fig_ldc.add_vrect(
     annotation_text="Baseload"
 )
 
-# =====================================================
-# LOAD DURATION CURVE
-# =====================================================
-
-st.subheader("Load Duration Curve")
-
-ldc = (
-    total_demand["Value"]
-    .sort_values(ascending=False)
-    .reset_index(drop=True)
-)
-
-ldc_pct = (
-    (ldc.index + 1)
-    / len(ldc)
-    * 100
-)
-
-fig_ldc = go.Figure()
-
-fig_ldc.add_trace(
-    go.Scatter(
-        x=ldc_pct,
-        y=ldc,
-        mode="lines",
-        name="Demand",
-        line=dict(
-            color="black",
-            width=3
-        )
-    )
-)
 
 average_load = total_demand["Value"].mean()
 
