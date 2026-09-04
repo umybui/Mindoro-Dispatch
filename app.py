@@ -204,6 +204,8 @@ gap_df["ShortageMW"] = (
     - gap_df["TotalGeneration"]
 )
 
+gap_df["ShortageArea"] = gap_df["ShortageMW"].clip(lower=0)
+
 gap_df["ReserveMargin"] = (
     gap_df["TotalGeneration"]
     - gap_df["TotalDemand"]
@@ -293,6 +295,17 @@ generation = generation[
 ]
 
 # =====================================================
+# DRAG PLANT ORDER (BELOW CHART)
+# =====================================================
+
+st.subheader("Drag Plant Order")
+
+plant_order = sort_items(
+    items=plant_order,
+    direction="vertical"
+)
+
+# =====================================================
 # KPI DISPLAY
 # =====================================================
 
@@ -334,6 +347,10 @@ with k5:
 
 fig = go.Figure()
 
+# -----------------------------------------------------
+# GENERATION STACK
+# -----------------------------------------------------
+
 for plant in plant_order:
 
     if plant not in selected_plants:
@@ -353,6 +370,51 @@ for plant in plant_order:
         )
     )
 
+# -----------------------------------------------------
+# SHORTAGE CALCULATION
+# -----------------------------------------------------
+
+gap_df["ShortageArea"] = (
+    gap_df["TotalDemand"]
+    - gap_df["TotalGeneration"]
+).clip(lower=0)
+
+# -----------------------------------------------------
+# ORANGE SHORTAGE SHADE
+# -----------------------------------------------------
+
+fig.add_trace(
+    go.Scatter(
+        x=gap_df["Datetime"],
+        y=gap_df["TotalGeneration"],
+        mode="lines",
+        line=dict(width=0),
+        hoverinfo="skip",
+        showlegend=False
+    )
+)
+
+fig.add_trace(
+    go.Scatter(
+        x=gap_df["Datetime"],
+        y=gap_df["TotalGeneration"]
+        + gap_df["ShortageArea"],
+        mode="lines",
+        fill="tonexty",
+        fillcolor="rgba(255,140,0,0.80)",
+        line=dict(width=0),
+        name="SHORTAGE",
+        customdata=gap_df["ShortageArea"],
+        hovertemplate=
+            "SHORTAGE: %{customdata:.2f} MW"
+            "<extra></extra>"
+    )
+)
+
+# -----------------------------------------------------
+# TOTAL GENERATION
+# -----------------------------------------------------
+
 fig.add_trace(
     go.Scatter(
         x=total_generation["Datetime"],
@@ -365,6 +427,10 @@ fig.add_trace(
         )
     )
 )
+
+# -----------------------------------------------------
+# TOTAL DEMAND
+# -----------------------------------------------------
 
 if show_demand:
 
@@ -381,9 +447,22 @@ if show_demand:
         )
     )
 
-fig.update_traces(
-    hovertemplate="%{fullData.name}: %{y:.2f} MW"
-)
+# -----------------------------------------------------
+# HOVER FORMAT
+# -----------------------------------------------------
+
+for trace in fig.data:
+
+    if trace.name != "SHORTAGE":
+
+        trace.hovertemplate = (
+            "%{fullData.name}: %{y:.2f} MW"
+            "<extra></extra>"
+        )
+
+# -----------------------------------------------------
+# LAYOUT
+# -----------------------------------------------------
 
 fig.update_layout(
     title="Mindoro Dispatch (NET MW)",
@@ -398,18 +477,11 @@ fig.update_xaxes(
     rangeslider_visible=True
 )
 
+# -----------------------------------------------------
+# DISPLAY
+# -----------------------------------------------------
+
 st.plotly_chart(
     fig,
     use_container_width=True
-)
-
-# =====================================================
-# DRAG PLANT ORDER (BELOW CHART)
-# =====================================================
-
-st.subheader("Drag Plant Order")
-
-plant_order = sort_items(
-    items=plant_order,
-    direction="vertical"
 )
