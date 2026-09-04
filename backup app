@@ -516,38 +516,18 @@ st.metric(
 )
 
 # =====================================================
-# LOAD DURATION CURVE SETTINGS
+# LDC SEGMENT SETTINGS
 # =====================================================
 
-st.sidebar.subheader("LDC Parameters")
+st.sidebar.subheader("LDC Segmentation")
 
-peak_cutoff = st.sidebar.number_input(
-    "Peak Region (%)",
-    min_value=1,
-    max_value=99,
-    value=20,
+num_segments = st.sidebar.number_input(
+    "Number of Segments",
+    min_value=2,
+    max_value=8,
+    value=4,
     step=1
 )
-
-baseload_cutoff = st.sidebar.number_input(
-    "Baseload Region Start (%)",
-    min_value=1,
-    max_value=99,
-    value=80,
-    step=1
-)
-
-# =====================================================
-# VALIDATION
-# =====================================================
-
-if peak_cutoff >= baseload_cutoff:
-
-    st.error(
-        "Peak Region (%) must be less than Baseload Region Start (%)."
-    )
-
-    st.stop()
 
 # =====================================================
 # LOAD DURATION CURVE
@@ -561,10 +541,89 @@ ldc = (
     .reset_index(drop=True)
 )
 
+segment_size = len(ldc) // num_segments
+
+segment_rows = []
+
+for i in range(num_segments):
+
+    start_idx = i * segment_size
+
+    if i == num_segments - 1:
+        end_idx = len(ldc)
+    else:
+        end_idx = (i + 1) * segment_size
+
+    segment_data = ldc.iloc[start_idx:end_idx]
+
+segment_mean = segment_data.mean()
+
+segment_sse = (
+    (segment_data - segment_mean) ** 2
+).sum()
+
+segment_mean = segment_data.mean()
+
+segment_sse = (
+    (segment_data - segment_mean) ** 2
+).sum()
+
+segment_rows.append({
+    "Segment": f"S{i+1}",
+    "Avg MW": round(segment_mean, 2),
+    "Max MW": round(segment_data.max(), 2),
+    "Min MW": round(segment_data.min(), 2),
+    "Hours": len(segment_data),
+    "% Time": round(
+        len(segment_data)
+        / len(ldc)
+        * 100,
+        2
+    ),
+    "Energy (MWh)": round(
+        segment_data.sum(),
+        2
+    ),
+    "SSE": round(
+        segment_sse,
+        0
+    )
+})
+
+segment_rows.append({
+    "Segment": f"S{i+1}",
+    "Avg MW": round(segment_data.mean(), 2),
+    "Max MW": round(segment_data.max(), 2),
+    "Min MW": round(segment_data.min(), 2),
+    "Hours": len(segment_data),
+    "% Time": round(
+        len(segment_data)
+        / len(ldc)
+        * 100,
+        2
+    ),
+    "Energy (MWh)": round(
+        segment_data.sum(),
+        2
+    )
+})
+
+segment_table = pd.DataFrame(
+    segment_rows
+)
+
 ldc_pct = (
     (ldc.index + 1)
     / len(ldc)
     * 100
+)
+
+st.caption("Load Segment Summary")
+
+st.dataframe(
+    segment_table,
+    use_container_width=True,
+    hide_index=True
 )
 
 fig_ldc = go.Figure()
@@ -582,46 +641,45 @@ fig_ldc.add_trace(
     )
 )
 
-fig_ldc.add_vline(
-    x=peak_cutoff,
-    line_dash="dot",
-    line_color="red",
-    annotation_text="Peak"
-)
+segment_colors = [
+    "red",
+    "orange",
+    "gold",
+    "green",
+    "deepskyblue",
+    "mediumpurple",
+    "gray",
+    "brown"
+]
 
-fig_ldc.add_vline(
-    x=baseload_cutoff,
-    line_dash="dot",
-    line_color="green",
-    annotation_text="Baseload"
-)
+for i in range(num_segments):
 
-fig_ldc.add_vrect(
-    x0=0,
-    x1=peak_cutoff,
-    fillcolor="red",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Peak"
-)
+    start_pct = (
+        i
+        / num_segments
+        * 100
+    )
 
-fig_ldc.add_vrect(
-    x0=peak_cutoff,
-    x1=baseload_cutoff,
-    fillcolor="yellow",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Mid-Merit"
-)
+    end_pct = (
+        (i + 1)
+        / num_segments
+        * 100
+    )
 
-fig_ldc.add_vrect(
-    x0=baseload_cutoff,
-    x1=100,
-    fillcolor="green",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Baseload"
-)
+    fig_ldc.add_vrect(
+        x0=start_pct,
+        x1=end_pct,
+        fillcolor=segment_colors[i],
+        opacity=0.08,
+        line_width=0,
+        annotation_text=f"S{i+1}"
+    )
+
+    fig_ldc.add_vline(
+        x=end_pct,
+        line_dash="dot",
+        line_color="black"
+    )
 
 average_load = total_demand["Value"].mean()
 
