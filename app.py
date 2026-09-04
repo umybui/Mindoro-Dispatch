@@ -132,4 +132,102 @@ plant_stats = (
     .reset_index()
 )
 
-if sort_
+if sort_option == "Alphabetical":
+
+    plant_order = sorted(
+        generation["Plant"].unique()
+    )
+
+elif sort_option == "Largest Generator First":
+
+    plant_order = (
+        plant_stats
+        .sort_values(
+            "Value",
+            ascending=False
+        )["Plant"]
+        .tolist()
+    )
+
+else:
+
+    plant_order = (
+        plant_stats
+        .sort_values(
+            "Value",
+            ascending=True
+        )["Plant"]
+        .tolist()
+    )
+
+# =====================================================
+# PLANT SLICER
+# =====================================================
+
+selected_plants = st.sidebar.multiselect(
+    "Plants",
+    options=plant_order,
+    default=plant_order
+)
+
+generation = generation[
+    generation["Plant"].isin(selected_plants)
+]
+
+# =====================================================
+# CHART
+# =====================================================
+
+fig = go.Figure()
+
+for plant in plant_order:
+
+    if plant not in selected_plants:
+        continue
+
+    temp = generation[
+        generation["Plant"] == plant
+    ]
+
+    fig.add_trace(
+        go.Scatter(
+            x=temp["Datetime"],
+            y=temp["Value"],
+            name=plant,
+            mode="lines",
+            stackgroup="generation"
+        )
+    )
+
+if show_demand:
+
+    fig.add_trace(
+        go.Scatter(
+            x=total_demand["Datetime"],
+            y=total_demand["Value"],
+            name="TOTAL DEMAND",
+            mode="lines",
+            line=dict(
+                color="black",
+                width=4
+            )
+        )
+    )
+
+fig.update_layout(
+    title="Mindoro Dispatch (NET MW)",
+    hovermode="x unified",
+    height=850,
+    xaxis_title="Datetime",
+    yaxis_title="MW",
+    legend_title="Plant"
+)
+
+fig.update_xaxes(
+    rangeslider_visible=True
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
