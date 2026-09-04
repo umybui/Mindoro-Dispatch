@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from streamlit_sortables import sort_items
 
 # =====================================================
 # PAGE
@@ -23,6 +24,7 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is None:
+    st.info("Please upload mindoro dispatch.csv")
     st.stop()
 
 # =====================================================
@@ -33,13 +35,15 @@ df = pd.read_csv(uploaded_file)
 
 df["Datetime"] = pd.to_datetime(df["Datetime"])
 
+# NET MW only
 df = df[df["Attribute"] == "NET MW"].copy()
 
+# Helper columns
 df["Month"] = df["Datetime"].dt.month
 df["Day"] = df["Datetime"].dt.day
 
 # =====================================================
-# SIDEBAR FILTERS
+# SIDEBAR
 # =====================================================
 
 st.sidebar.header("Filters")
@@ -59,6 +63,10 @@ month_names = {
     12: "Dec"
 }
 
+# =====================================================
+# MONTH FILTER
+# =====================================================
+
 available_months = sorted(df["Month"].unique())
 
 selected_months = st.sidebar.multiselect(
@@ -68,6 +76,10 @@ selected_months = st.sidebar.multiselect(
     format_func=lambda x: month_names[x]
 )
 
+# =====================================================
+# DAY FILTER
+# =====================================================
+
 available_days = sorted(df["Day"].unique())
 
 selected_days = st.sidebar.multiselect(
@@ -76,14 +88,9 @@ selected_days = st.sidebar.multiselect(
     default=available_days
 )
 
-sort_option = st.sidebar.selectbox(
-    "Plant Order",
-    [
-        "Alphabetical",
-        "Largest Generator First",
-        "Smallest Generator First"
-    ]
-)
+# =====================================================
+# TOTAL DEMAND TOGGLE
+# =====================================================
 
 show_demand = st.sidebar.checkbox(
     "Show Total Demand",
@@ -91,11 +98,12 @@ show_demand = st.sidebar.checkbox(
 )
 
 # =====================================================
-# APPLY FILTERS
+# FILTER DATA
 # =====================================================
 
 filtered = df[
-    (df["Month"].isin(selected_months)) &
+    (df["Month"].isin(selected_months))
+    &
     (df["Day"].isin(selected_days))
 ].copy()
 
@@ -110,7 +118,7 @@ total_demand = (
 )
 
 # =====================================================
-# GENERATORS
+# GENERATION DATA
 # =====================================================
 
 generation = filtered[
@@ -119,11 +127,20 @@ generation = filtered[
         "TOTAL GENERATION DISPATCH",
         "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
     ])
-]
+].copy()
 
 # =====================================================
-# SORT ORDER
+# INITIAL SORT
 # =====================================================
+
+sort_option = st.sidebar.selectbox(
+    "Initial Order",
+    [
+        "Largest Generator First",
+        "Alphabetical",
+        "Smallest Generator First"
+    ]
+)
 
 plant_stats = (
     generation
@@ -161,7 +178,18 @@ else:
     )
 
 # =====================================================
-# PLANT SLICER
+# DRAG & DROP STACK ORDER
+# =====================================================
+
+st.sidebar.subheader("Drag Plant Order")
+
+plant_order = sort_items(
+    items=plant_order,
+    direction="vertical"
+)
+
+# =====================================================
+# PLANT FILTER
 # =====================================================
 
 selected_plants = st.sidebar.multiselect(
@@ -199,6 +227,10 @@ for plant in plant_order:
         )
     )
 
+# =====================================================
+# TOTAL DEMAND LINE
+# =====================================================
+
 if show_demand:
 
     fig.add_trace(
@@ -214,10 +246,14 @@ if show_demand:
         )
     )
 
+# =====================================================
+# FORMAT
+# =====================================================
+
 fig.update_layout(
     title="Mindoro Dispatch (NET MW)",
     hovermode="x unified",
-    height=850,
+    height=900,
     xaxis_title="Datetime",
     yaxis_title="MW",
     legend_title="Plant"
@@ -226,6 +262,10 @@ fig.update_layout(
 fig.update_xaxes(
     rangeslider_visible=True
 )
+
+# =====================================================
+# DISPLAY
+# =====================================================
 
 st.plotly_chart(
     fig,
