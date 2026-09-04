@@ -402,10 +402,107 @@ st.dataframe(
 )
 
 # =====================================================
+# BOXPLOTS
+# =====================================================
+
+st.subheader("Demand Distribution Analysis")
+
+b1, b2 = st.columns(2)
+
+# =====================================================
 # CHART
 # =====================================================
 
 fig = go.Figure()
+
+daily_peak = (
+    total_demand.assign(
+        Date=total_demand["Datetime"].dt.date,
+        Month=total_demand["Datetime"].dt.strftime("%b")
+    )
+    .groupby(["Month", "Date"], as_index=False)
+    .agg(
+        DailyPeak=("Value", "max")
+    )
+)
+
+month_order = [
+    "Jan", "Feb", "Mar", "Apr",
+    "May", "Jun", "Jul", "Aug",
+    "Sep", "Oct", "Nov", "Dec"
+]
+
+fig_peak = go.Figure()
+
+for month in month_order:
+
+    temp = daily_peak[
+        daily_peak["Month"] == month
+    ]
+
+    if len(temp) == 0:
+        continue
+
+    fig_peak.add_trace(
+        go.Box(
+            y=temp["DailyPeak"],
+            name=month,
+            boxmean=True
+        )
+    )
+
+fig_peak.update_layout(
+    title="Daily Peak Demand by Month",
+    yaxis_title="MW",
+    height=450
+)
+
+with b1:
+    st.plotly_chart(
+        fig_peak,
+        use_container_width=True
+    )
+
+hourly_profile = total_demand.copy()
+
+hourly_profile["Hour"] = (
+    hourly_profile["Datetime"]
+    .dt.hour
+)
+
+fig_hour = go.Figure()
+
+for hr in range(24):
+
+    temp = hourly_profile[
+        hourly_profile["Hour"] == hr
+    ]
+
+    if len(temp) == 0:
+        continue
+
+    fig_hour.add_trace(
+        go.Box(
+            y=temp["Value"],
+            name=str(hr),
+            boxmean=True
+        )
+    )
+
+fig_hour.update_layout(
+    title="Hourly Demand Distribution",
+    xaxis_title="Hour of Day",
+    yaxis_title="MW",
+    height=450
+)
+
+with b2:
+    st.plotly_chart(
+        fig_hour,
+        use_container_width=True
+    )
+
+
 
 # -----------------------------------------------------
 # GENERATION STACK
