@@ -768,17 +768,17 @@ segment_colors = [
 
 for i, (start_idx, end_idx) in enumerate(boundaries):
 
-    start_pct = (
-        start_idx
-        / len(ldc)
-        * 100
-    )
+  start_pct = (
+    start_idx
+    / len(ldc_seg)
+    * 100
+)
 
-    end_pct = (
-        end_idx
-        / len(ldc)
-        * 100
-    )
+end_pct = (
+    end_idx
+    / len(ldc_seg)
+    * 100
+)
 
     fig_ldc.add_vrect(
         x0=start_pct,
