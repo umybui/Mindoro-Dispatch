@@ -93,9 +93,7 @@ month_names = {
     12: "Dec"
 }
 
-available_months = sorted(
-    df["Month"].unique()
-)
+available_months = sorted(df["Month"].unique())
 
 selected_months = st.sidebar.multiselect(
     "Month",
@@ -108,9 +106,7 @@ selected_months = st.sidebar.multiselect(
 # DAY FILTER
 # =====================================================
 
-available_days = sorted(
-    df["Day"].unique()
-)
+available_days = sorted(df["Day"].unique())
 
 selected_days = st.sidebar.multiselect(
     "Day of Month",
@@ -190,41 +186,49 @@ total_generation.rename(
 # KPI DATA
 # =====================================================
 
-peak_demand = total_demand["Value"].max()
+gap_df = total_demand.merge(
+    total_generation,
+    on="Datetime",
+    how="inner"
+)
 
-average_demand = total_demand["Value"].mean()
+gap_df.rename(
+    columns={
+        "Value": "TotalDemand"
+    },
+    inplace=True
+)
 
-peak_row = total_demand.loc[
-    total_demand["Value"].idxmax()
+gap_df["ShortageMW"] = (
+    gap_df["TotalDemand"]
+    - gap_df["TotalGeneration"]
+)
+
+gap_df["ReserveMargin"] = (
+    gap_df["TotalGeneration"]
+    - gap_df["TotalDemand"]
+)
+
+peak_demand = gap_df["TotalDemand"].max()
+
+peak_row = gap_df.loc[
+    gap_df["TotalDemand"].idxmax()
 ]
 
 peak_datetime = peak_row["Datetime"]
 
-# =====================================================
-# KPI CARDS
-# =====================================================
+hours_with_shortage = (
+    gap_df["ShortageMW"] > 0
+).sum()
 
-kpi1, kpi2, kpi3 = st.columns(3)
+max_shortage = max(
+    gap_df["ShortageMW"].max(),
+    0
+)
 
-with kpi1:
-    st.metric(
-        "Peak Demand (MW)",
-        f"{peak_demand:,.2f}"
-    )
-
-with kpi2:
-    st.metric(
-        "Average Demand (MW)",
-        f"{average_demand:,.2f}"
-    )
-
-with kpi3:
-    st.metric(
-        "Peak Demand Time",
-        peak_datetime.strftime(
-            "%Y-%m-%d %H:%M"
-        )
-    )
+hours_low_reserve = (
+    gap_df["ReserveMargin"] < 5
+).sum()
 
 # =====================================================
 # INITIAL SORT
@@ -275,19 +279,6 @@ else:
     )
 
 # =====================================================
-# DRAG & DROP ORDER
-# =====================================================
-
-st.sidebar.subheader(
-    "Drag Plant Order"
-)
-
-plant_order = sort_items(
-    items=plant_order,
-    direction="vertical"
-)
-
-# =====================================================
 # PLANT FILTER
 # =====================================================
 
@@ -298,10 +289,44 @@ selected_plants = st.sidebar.multiselect(
 )
 
 generation = generation[
-    generation["Plant"].isin(
-        selected_plants
-    )
+    generation["Plant"].isin(selected_plants)
 ]
+
+# =====================================================
+# KPI DISPLAY
+# =====================================================
+
+k1, k2, k3, k4, k5 = st.columns(5)
+
+with k1:
+    st.metric(
+        "Peak Demand",
+        f"{peak_demand:,.2f} MW"
+    )
+
+with k2:
+    st.metric(
+        "Hours with Shortage",
+        f"{hours_with_shortage:,}"
+    )
+
+with k3:
+    st.metric(
+        "Maximum Shortage",
+        f"{max_shortage:,.2f} MW"
+    )
+
+with k4:
+    st.metric(
+        "Low Reserve Hours (<5 MW)",
+        f"{hours_low_reserve:,}"
+    )
+
+with k5:
+    st.metric(
+        "Peak Demand Time",
+        peak_datetime.strftime("%Y-%m-%d %H:%M")
+    )
 
 # =====================================================
 # CHART
@@ -328,10 +353,6 @@ for plant in plant_order:
         )
     )
 
-# =====================================================
-# TOTAL GENERATION LINE
-# =====================================================
-
 fig.add_trace(
     go.Scatter(
         x=total_generation["Datetime"],
@@ -344,10 +365,6 @@ fig.add_trace(
         )
     )
 )
-
-# =====================================================
-# TOTAL DEMAND LINE
-# =====================================================
 
 if show_demand:
 
@@ -364,17 +381,9 @@ if show_demand:
         )
     )
 
-# =====================================================
-# HOVER FORMAT
-# =====================================================
-
 fig.update_traces(
     hovertemplate="%{fullData.name}: %{y:.2f} MW"
 )
-
-# =====================================================
-# FORMAT
-# =====================================================
 
 fig.update_layout(
     title="Mindoro Dispatch (NET MW)",
@@ -389,11 +398,18 @@ fig.update_xaxes(
     rangeslider_visible=True
 )
 
-# =====================================================
-# DISPLAY
-# =====================================================
-
 st.plotly_chart(
     fig,
     use_container_width=True
+)
+
+# =====================================================
+# DRAG PLANT ORDER (BELOW CHART)
+# =====================================================
+
+st.subheader("Drag Plant Order")
+
+plant_order = sort_items(
+    items=plant_order,
+    direction="vertical"
 )
