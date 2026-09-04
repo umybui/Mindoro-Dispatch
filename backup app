@@ -15,25 +15,40 @@ st.set_page_config(
 st.title("Mindoro Dispatch Dashboard")
 
 # =====================================================
-# FILE UPLOAD
-# =====================================================
-
-uploaded_file = st.file_uploader(
-    "Upload mindoro dispatch.csv",
-    type=["csv"]
-)
-
-if uploaded_file is None:
-    st.info("Please upload mindoro dispatch.csv")
-    st.stop()
-
-# =====================================================
 # LOAD DATA
 # =====================================================
 
-df = pd.read_csv(uploaded_file)
+@st.cache_data
+def load_data():
 
-df["Datetime"] = pd.to_datetime(df["Datetime"])
+    df = pd.read_excel(
+        "Mindoro Dispatch Summary Final.xlsm",
+        sheet_name="Main Query",
+        engine="openpyxl"
+    )
+
+    df["Datetime"] = pd.to_datetime(
+        df["Datetime"],
+        errors="coerce"
+    )
+
+    df["Value"] = pd.to_numeric(
+        df["Value"],
+        errors="coerce"
+    )
+
+    return df
+
+df = load_data()
+
+# Optional manual refresh
+if st.sidebar.button("Refresh Data"):
+    st.cache_data.clear()
+    st.rerun()
+
+st.sidebar.success(
+    f"Loaded {len(df):,} records"
+)
 
 df = df[df["Attribute"] == "NET MW"].copy()
 
