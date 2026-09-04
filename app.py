@@ -625,11 +625,31 @@ ldc = (
     .reset_index(drop=True)
 )
 
-boundaries, total_sse = (
-    optimal_ldc_segments(
-        ldc.values,
-        num_segments
+# Compress LDC for segmentation
+
+max_points = 1000
+
+if len(ldc) > max_points:
+
+    step = len(ldc) // max_points
+
+    ldc_seg = (
+        ldc.groupby(
+            ldc.index // step
+        )
+        .mean()
+        .reset_index(drop=True)
     )
+
+else:
+
+    ldc_seg = ldc.copy()
+
+boundaries, total_sse = (
+   optimal_ldc_segments(
+    ldc_seg.values,
+    num_segments
+)
 )
 
 segment_rows = []
@@ -695,24 +715,6 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
             )
     })
     
-segment_rows.append({
-    "Segment": f"S{i+1}",
-    "Avg MW": round(segment_data.mean(), 2),
-    "Max MW": round(segment_data.max(), 2),
-    "Min MW": round(segment_data.min(), 2),
-    "Hours": len(segment_data),
-    "% Time": round(
-        len(segment_data)
-        / len(ldc)
-        * 100,
-        2
-    ),
-    "Energy (MWh)": round(
-        segment_data.sum(),
-        2
-    )
-})
-
 segment_table = pd.DataFrame(
     segment_rows
 )
@@ -792,22 +794,7 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
         line_color="black"
     )
 
-    fig_ldc.add_vrect(
-        x0=start_pct,
-        x1=end_pct,
-        fillcolor=segment_colors[i],
-        opacity=0.08,
-        line_width=0,
-        annotation_text=f"S{i+1}"
-    )
-
-    fig_ldc.add_vline(
-        x=end_pct,
-        line_dash="dot",
-        line_color="black"
-    )
-
-average_load = total_demand["Value"].mean()
+ average_load = total_demand["Value"].mean()
 
 fig_ldc.add_hline(
     y=average_load,
