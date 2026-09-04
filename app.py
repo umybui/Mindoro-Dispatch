@@ -211,6 +211,24 @@ gap_df["ReserveMargin"] = (
     - gap_df["TotalDemand"]
 )
 
+# =====================================================
+# SHORTAGE START / END MARKERS
+# =====================================================
+
+gap_df["IsShortage"] = gap_df["ShortageMW"] > 0
+
+# Start of shortage
+shortage_start = gap_df[
+    (gap_df["IsShortage"]) &
+    (~gap_df["IsShortage"].shift(1).fillna(False))
+]
+
+# End of shortage
+shortage_end = gap_df[
+    (~gap_df["IsShortage"]) &
+    (gap_df["IsShortage"].shift(1).fillna(False))
+]
+
 peak_demand = gap_df["TotalDemand"].max()
 
 peak_row = gap_df.loc[
@@ -301,16 +319,6 @@ generation = generation[
     generation["Plant"].isin(selected_plants)
 ]
 
-# =====================================================
-# DRAG PLANT ORDER (BELOW CHART)
-# =====================================================
-
-st.subheader("Drag Plant Order")
-
-plant_order = sort_items(
-    items=plant_order,
-    direction="vertical"
-)
 
 # =====================================================
 # KPI DISPLAY
@@ -338,7 +346,7 @@ with k3:
 
 with k4:
     st.metric(
-        "Low Reserve Hours (<5 MW)",
+        "Shortage Events",
         f"{hours_low_reserve:,}"
     )
 
@@ -471,24 +479,6 @@ for trace in fig.data:
 # LAYOUT
 # -----------------------------------------------------
 
-# =====================================================
-# SHORTAGE START / END MARKERS
-# =====================================================
-
-gap_df["IsShortage"] = gap_df["ShortageMW"] > 0
-
-# Start of shortage
-shortage_start = gap_df[
-    (gap_df["IsShortage"]) &
-    (~gap_df["IsShortage"].shift(1).fillna(False))
-]
-
-# End of shortage
-shortage_end = gap_df[
-    (~gap_df["IsShortage"]) &
-    (gap_df["IsShortage"].shift(1).fillna(False))
-]
-
 # START markers
 
 fig.add_trace(
@@ -549,4 +539,15 @@ fig.update_xaxes(
 st.plotly_chart(
     fig,
     use_container_width=True
+)
+
+# =====================================================
+# DRAG PLANT ORDER (BELOW CHART)
+# =====================================================
+
+st.subheader("Drag Plant Order")
+
+plant_order = sort_items(
+    items=plant_order,
+    direction="vertical"
 )
