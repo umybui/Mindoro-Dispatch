@@ -48,6 +48,34 @@ df["Day"] = df["Datetime"].dt.day
 
 st.sidebar.header("Filters")
 
+# =====================================================
+# AREA FILTER
+# =====================================================
+
+available_workbooks = sorted(
+    df["SourceWorkbook"].dropna().unique()
+)
+
+workbook_map = {}
+
+for wb in available_workbooks:
+
+    if "Oriental" in str(wb):
+        workbook_map[wb] = "Oriental Mindoro"
+
+    elif "Occidental" in str(wb):
+        workbook_map[wb] = "Occidental Mindoro"
+
+    else:
+        workbook_map[wb] = str(wb)
+
+selected_workbooks = st.sidebar.multiselect(
+    "Area",
+    options=available_workbooks,
+    default=available_workbooks,
+    format_func=lambda x: workbook_map[x]
+)
+
 month_names = {
     1: "Jan",
     2: "Feb",
@@ -102,6 +130,8 @@ show_demand = st.sidebar.checkbox(
 # =====================================================
 
 filtered = df[
+    (df["SourceWorkbook"].isin(selected_workbooks))
+    &
     (df["Month"].isin(selected_months))
     &
     (df["Day"].isin(selected_days))
