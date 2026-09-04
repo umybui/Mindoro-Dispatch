@@ -529,6 +529,90 @@ num_segments = st.sidebar.number_input(
     step=1
 )
 
+import numpy as np
+
+def optimal_ldc_segments(ldc_values, k):
+
+    y = np.array(ldc_values)
+
+    n = len(y)
+
+    prefix_sum = np.zeros(n + 1)
+    prefix_sq = np.zeros(n + 1)
+
+    prefix_sum[1:] = np.cumsum(y)
+    prefix_sq[1:] = np.cumsum(y ** 2)
+
+    def segment_sse(i, j):
+
+        count = j - i
+
+        if count <= 0:
+            return 0
+
+        seg_sum = (
+            prefix_sum[j]
+            - prefix_sum[i]
+        )
+
+        seg_sq = (
+            prefix_sq[j]
+            - prefix_sq[i]
+        )
+
+        mean = seg_sum / count
+
+        return seg_sq - count * mean * mean
+
+    dp = np.full(
+        (k + 1, n + 1),
+        np.inf
+    )
+
+    split = np.zeros(
+        (k + 1, n + 1),
+        dtype=int
+    )
+
+    dp[0, 0] = 0
+
+    for seg in range(1, k + 1):
+
+        for end in range(1, n + 1):
+
+            for start in range(seg - 1, end):
+
+                cost = (
+                    dp[seg - 1, start]
+                    + segment_sse(start, end)
+                )
+
+                if cost < dp[seg, end]:
+
+                    dp[seg, end] = cost
+
+                    split[seg, end] = start
+
+    boundaries = []
+
+    end = n
+
+    for seg in range(k, 0, -1):
+
+        start = split[seg, end]
+
+        boundaries.append(
+            (start, end)
+        )
+
+        end = start
+
+    boundaries.reverse()
+
+    return boundaries, dp[k, n]
+
+
+
 # =====================================================
 # LOAD DURATION CURVE
 # =====================================================
@@ -541,55 +625,76 @@ ldc = (
     .reset_index(drop=True)
 )
 
-segment_size = len(ldc) // num_segments
+boundaries, total_sse = (
+    optimal_ldc_segments(
+        ldc.values,
+        num_segments
+    )
+)
 
 segment_rows = []
+for i, (start_idx, end_idx) in enumerate(boundaries):
 
-for i in range(num_segments):
+    segment_data = ldc.iloc[
+        start_idx:end_idx
+    ]
 
-    start_idx = i * segment_size
-
-    if i == num_segments - 1:
-        end_idx = len(ldc)
-    else:
-        end_idx = (i + 1) * segment_size
-
-    segment_data = ldc.iloc[start_idx:end_idx]
-
-segment_mean = segment_data.mean()
-
-segment_sse = (
-    (segment_data - segment_mean) ** 2
-).sum()
-
-segment_mean = segment_data.mean()
-
-segment_sse = (
-    (segment_data - segment_mean) ** 2
-).sum()
-
-segment_rows.append({
-    "Segment": f"S{i+1}",
-    "Avg MW": round(segment_mean, 2),
-    "Max MW": round(segment_data.max(), 2),
-    "Min MW": round(segment_data.min(), 2),
-    "Hours": len(segment_data),
-    "% Time": round(
-        len(segment_data)
-        / len(ldc)
-        * 100,
-        2
-    ),
-    "Energy (MWh)": round(
-        segment_data.sum(),
-        2
-    ),
-    "SSE": round(
-        segment_sse,
-        0
+    segment_mean = (
+        segment_data.mean()
     )
-})
 
+    segment_sse = (
+        (
+            segment_data
+            - segment_mean
+        ) ** 2
+    ).sum()
+
+    segment_rows.append({
+
+        "Segment":
+            f"S{i+1}",
+
+        "Avg MW":
+            round(segment_mean, 2),
+
+        "Max MW":
+            round(
+                segment_data.max(),
+                2
+            ),
+
+        "Min MW":
+            round(
+                segment_data.min(),
+                2
+            ),
+
+        "Hours":
+            len(segment_data),
+
+        "% Time":
+            round(
+                len(segment_data)
+                /
+                len(ldc)
+                * 100,
+                2
+            ),
+
+        "Energy (MWh)":
+            round(
+                segment_data.sum(),
+                2
+            ),
+
+        "SSE":
+            round(
+                segment_sse,
+                0
+            )
+    })
+    
 segment_rows.append({
     "Segment": f"S{i+1}",
     "Avg MW": round(segment_data.mean(), 2),
@@ -619,6 +724,12 @@ ldc_pct = (
 )
 
 st.caption("Load Segment Summary")
+
+st.metric(
+    "Total Segmentation SSE",
+    f"{total_sse:,.0f}"
+)
+
 
 st.dataframe(
     segment_table,
@@ -652,18 +763,33 @@ segment_colors = [
     "brown"
 ]
 
-for i in range(num_segments):
+for i, (start_idx, end_idx) in enumerate(boundaries):
 
     start_pct = (
-        i
-        / num_segments
+        start_idx
+        / len(ldc)
         * 100
     )
 
     end_pct = (
-        (i + 1)
-        / num_segments
+        end_idx
+        / len(ldc)
         * 100
+    )
+
+    fig_ldc.add_vrect(
+        x0=start_pct,
+        x1=end_pct,
+        fillcolor=segment_colors[i],
+        opacity=0.08,
+        line_width=0,
+        annotation_text=f"S{i+1}"
+    )
+
+    fig_ldc.add_vline(
+        x=end_pct,
+        line_dash="dot",
+        line_color="black"
     )
 
     fig_ldc.add_vrect(
