@@ -1040,6 +1040,13 @@ for event_id, grp in gap_df.groupby("EventID"):
 
 shortage_events = pd.DataFrame(events)
 
+st.dataframe(
+    shortage_events,
+    height=350,
+    use_container_width=True,
+    hide_index=True
+)
+
 st.subheader("Plant Contribution Analysis")
 
 plant_summary = (
