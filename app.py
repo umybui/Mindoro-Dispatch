@@ -521,11 +521,6 @@ st.metric(
 
 st.sidebar.subheader("LDC Segmentation")
 
-st.sidebar.info(
-    f"Recommended Segments: "
-    f"{recommended_segments}"
-)
-
 num_segments = st.sidebar.number_input(
     "Number of Segments",
     min_value=2,
