@@ -516,38 +516,18 @@ st.metric(
 )
 
 # =====================================================
-# LOAD DURATION CURVE SETTINGS
+# LDC SEGMENT SETTINGS
 # =====================================================
 
-st.sidebar.subheader("LDC Parameters")
+st.sidebar.subheader("LDC Segmentation")
 
-peak_cutoff = st.sidebar.number_input(
-    "Peak Region (%)",
-    min_value=1,
-    max_value=99,
-    value=20,
+num_segments = st.sidebar.number_input(
+    "Number of Segments",
+    min_value=2,
+    max_value=8,
+    value=4,
     step=1
 )
-
-baseload_cutoff = st.sidebar.number_input(
-    "Baseload Region Start (%)",
-    min_value=1,
-    max_value=99,
-    value=80,
-    step=1
-)
-
-# =====================================================
-# VALIDATION
-# =====================================================
-
-if peak_cutoff >= baseload_cutoff:
-
-    st.error(
-        "Peak Region (%) must be less than Baseload Region Start (%)."
-    )
-
-    st.stop()
 
 # =====================================================
 # LOAD DURATION CURVE
@@ -561,10 +541,51 @@ ldc = (
     .reset_index(drop=True)
 )
 
+segment_size = len(ldc) // num_segments
+
+segment_rows = []
+
+for i in range(num_segments):
+
+    start_idx = i * segment_size
+
+    if i == num_segments - 1:
+        end_idx = len(ldc)
+    else:
+        end_idx = (i + 1) * segment_size
+
+    segment_data = ldc.iloc[start_idx:end_idx]
+
+    segment_rows.append({
+        "Segment": f"S{i+1}",
+        "Avg MW": round(segment_data.mean(), 2),
+        "Max MW": round(segment_data.max(), 2),
+        "Min MW": round(segment_data.min(), 2),
+        "Hours": len(segment_data),
+        "% Time": round(
+            len(segment_data)
+            / len(ldc)
+            * 100,
+            2
+        )
+    })
+
+segment_table = pd.DataFrame(
+    segment_rows
+)
+
 ldc_pct = (
     (ldc.index + 1)
     / len(ldc)
     * 100
+)
+
+st.caption("Load Segment Summary")
+
+st.dataframe(
+    segment_table,
+    use_container_width=True,
+    hide_index=True
 )
 
 fig_ldc = go.Figure()
@@ -581,6 +602,46 @@ fig_ldc.add_trace(
         )
     )
 )
+
+segment_colors = [
+    "red",
+    "orange",
+    "gold",
+    "green",
+    "deepskyblue",
+    "mediumpurple",
+    "gray",
+    "brown"
+]
+
+for i in range(num_segments):
+
+    start_pct = (
+        i
+        / num_segments
+        * 100
+    )
+
+    end_pct = (
+        (i + 1)
+        / num_segments
+        * 100
+    )
+
+    fig_ldc.add_vrect(
+        x0=start_pct,
+        x1=end_pct,
+        fillcolor=segment_colors[i],
+        opacity=0.08,
+        line_width=0,
+        annotation_text=f"S{i+1}"
+    )
+
+    fig_ldc.add_vline(
+        x=end_pct,
+        line_dash="dot",
+        line_color="black"
+    )
 
 fig_ldc.add_vline(
     x=peak_cutoff,
