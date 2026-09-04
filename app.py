@@ -521,11 +521,16 @@ st.metric(
 
 st.sidebar.subheader("LDC Segmentation")
 
+st.sidebar.info(
+    f"Recommended Segments: "
+    f"{recommended_segments}"
+)
+
 num_segments = st.sidebar.number_input(
     "Number of Segments",
     min_value=2,
     max_value=8,
-    value=4,
+    value=int(recommended_segments),
     step=1
 )
 
@@ -652,6 +657,53 @@ boundaries, total_sse = (
 )
 )
 
+sse_results = []
+
+for k in range(1, 9):
+
+    _, sse = optimal_ldc_segments(
+        ldc_seg.values,
+        k
+    )
+
+    sse_results.append({
+        "Segments": k,
+        "SSE": sse
+    })
+
+sse_df = pd.DataFrame(
+    sse_results
+)
+
+sse_df["Improvement"] = (
+    sse_df["SSE"].shift(1)
+    - sse_df["SSE"]
+)
+
+sse_df["PctImprovement"] = (
+    sse_df["Improvement"]
+    / sse_df["SSE"].shift(1)
+    * 100
+)
+
+recommended_segments = 4
+
+for i in range(2, len(sse_df)):
+
+    if (
+        sse_df.loc[i, "PctImprovement"]
+        < 10
+    ):
+        recommended_segments = (
+            int(
+                sse_df.loc[
+                    i - 1,
+                    "Segments"
+                ]
+            )
+        )
+        break
+
 segment_rows = []
 
 scale_factor = len(ldc) / len(ldc_seg)
@@ -749,6 +801,35 @@ st.metric(
     f"{total_sse:,.0f}"
 )
 
+fig_elbow = go.Figure()
+
+fig_elbow.add_trace(
+    go.Scatter(
+        x=sse_df["Segments"],
+        y=sse_df["SSE"],
+        mode="lines+markers",
+        name="SSE"
+    )
+)
+
+fig_elbow.add_vline(
+    x=recommended_segments,
+    line_dash="dash",
+    annotation_text=
+        f"Recommended ({recommended_segments})"
+)
+
+fig_elbow.update_layout(
+    title="Elbow Method",
+    xaxis_title="Number of Segments",
+    yaxis_title="SSE",
+    height=350
+)
+
+st.plotly_chart(
+    fig_elbow,
+    use_container_width=True
+)
 
 st.dataframe(
     segment_table,
