@@ -540,13 +540,15 @@ baseload_cutoff = st.sidebar.number_input(
 # =====================================================
 # VALIDATION
 # =====================================================
- 
+
 if peak_cutoff >= baseload_cutoff:
- 
-st.error(
-    "Peak Region (%) must be less than Baseload Region Start (%)."
-)
-st.stop()
+
+    st.error(
+        "Peak Region (%) must be less than Baseload Region Start (%)."
+    )
+
+    st.stop()
+
 # =====================================================
 # LOAD DURATION CURVE
 # =====================================================
