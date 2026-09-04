@@ -627,7 +627,7 @@ ldc = (
 
 # Compress LDC for segmentation
 
-max_points = 1000
+max_points = 200
 
 if len(ldc) > max_points:
 
@@ -685,7 +685,13 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
 
         "Segment":
             f"S{i+1}",
+        "Start %": round(
+            actual_start / len(ldc) * 100, 2),
 
+"End %": round(
+    actual_end / len(ldc) * 100,
+    2
+),
         "Avg MW":
             round(segment_mean, 2),
 
@@ -759,49 +765,7 @@ fig_ldc.add_trace(
         mode="lines",
         name="Demand",
         line=dict(
-            color="black",for i, (start_idx, end_idx) in enumerate(boundaries):
-
-    actual_start = int(
-        start_idx * scale_factor
-    )
-
-    actual_end = int(
-        end_idx * scale_factor
-    )
-
-    segment_data = ldc.iloc[
-        actual_start:actual_end
-    ]
-
-    segment_mean = segment_data.mean()
-
-    x0 = (
-        actual_start
-        / len(ldc)
-        * 100
-    )
-
-    x1 = (
-        actual_end
-        / len(ldc)
-        * 100
-    )
-
-    fig_ldc.add_trace(
-        go.Scatter(
-            x=[x0, x1],
-            y=[
-                segment_mean,
-                segment_mean
-            ],
-            mode="lines",
-            line=dict(
-                color=segment_colors[i],
-                width=5
-            ),
-            name=f"S{i+1} Mean"
-        )
-    )
+            color="black",
             width=3
         )
     )
@@ -818,27 +782,37 @@ segment_colors = [
     "brown"
 ]
 
+scale_factor = len(ldc) / len(ldc_seg)
+
 for i, (start_idx, end_idx) in enumerate(boundaries):
 
-actual_start = int(
-    start_idx * scale_factor
-)
+    actual_start = int(
+        start_idx * scale_factor
+    )
 
-actual_end = int(
-    end_idx * scale_factor
-)
+    actual_end = int(
+        end_idx * scale_factor
+    )
 
-start_pct = (
-    actual_start
-    / len(ldc)
-    * 100
-)
+    segment_data = ldc.iloc[
+        actual_start:actual_end
+    ]
 
-end_pct = (
-    actual_end
-    / len(ldc)
-    * 100
-)
+    segment_mean = segment_data.mean()
+
+    start_pct = (
+        actual_start
+        / len(ldc)
+        * 100
+    )
+
+    end_pct = (
+        actual_end
+        / len(ldc)
+        * 100
+    )
+
+    # Region shading
 
     fig_ldc.add_vrect(
         x0=start_pct,
@@ -855,7 +829,26 @@ end_pct = (
         line_color="black"
     )
 
-average_load = total_demand["Value"].mean()
+    # Piecewise mean line
+
+    fig_ldc.add_trace(
+        go.Scatter(
+            x=[
+                start_pct,
+                end_pct
+            ],
+            y=[
+                segment_mean,
+                segment_mean
+            ],
+            mode="lines",
+            line=dict(
+                color=segment_colors[i],
+                width=6
+            ),
+            name=f"S{i+1} Mean"
+        )
+    )
 
 fig_ldc.add_hline(
     y=average_load,
