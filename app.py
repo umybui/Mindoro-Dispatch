@@ -211,24 +211,6 @@ gap_df["ReserveMargin"] = (
     - gap_df["TotalDemand"]
 )
 
-# =====================================================
-# SHORTAGE START / END MARKERS
-# =====================================================
-
-gap_df["IsShortage"] = gap_df["ShortageMW"] > 0
-
-# Start of shortage
-shortage_start = gap_df[
-    (gap_df["IsShortage"]) &
-    (~gap_df["IsShortage"].shift(1).fillna(False))
-]
-
-# End of shortage
-shortage_end = gap_df[
-    (~gap_df["IsShortage"]) &
-    (gap_df["IsShortage"].shift(1).fillna(False))
-]
-
 peak_demand = gap_df["TotalDemand"].max()
 
 peak_row = gap_df.loc[
@@ -249,8 +231,6 @@ max_shortage = max(
 hours_low_reserve = (
     gap_df["ReserveMargin"] < 5
 ).sum()
-
-shortage_events = len(shortage_start)
 
 total_shortage_mwh = gap_df.loc[
     gap_df["ShortageMW"] > 0,
@@ -346,7 +326,7 @@ with k3:
 
 with k4:
     st.metric(
-        "Shortage Events",
+        "Low Reserve Hours (<5 MW)",
         f"{hours_low_reserve:,}"
     )
 
@@ -478,46 +458,6 @@ for trace in fig.data:
 # -----------------------------------------------------
 # LAYOUT
 # -----------------------------------------------------
-
-# START markers
-
-fig.add_trace(
-    go.Scatter(
-        x=shortage_start["Datetime"],
-        y=shortage_start["TotalDemand"],
-        mode="text",
-        text=["⚠ START"] * len(shortage_start),
-        textfont=dict(
-            size=14,
-            color="red"
-        ),
-        name="SHORTAGE START",
-        hovertemplate=
-            "SHORTAGE START<br>"
-            "Demand: %{y:.2f} MW"
-            "<extra></extra>"
-    )
-)
-
-# END markers
-
-fig.add_trace(
-    go.Scatter(
-        x=shortage_end["Datetime"],
-        y=shortage_end["TotalDemand"],
-        mode="text",
-        text=["⚠ END"] * len(shortage_end),
-        textfont=dict(
-            size=14,
-            color="darkorange"
-        ),
-        name="SHORTAGE END",
-        hovertemplate=
-            "SHORTAGE END<br>"
-            "Demand: %{y:.2f} MW"
-            "<extra></extra>"
-    )
-)
 
 fig.update_layout(
     title="Mindoro Dispatch (NET MW)",
