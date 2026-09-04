@@ -525,7 +525,7 @@ num_segments = st.sidebar.number_input(
     "Number of Segments",
     min_value=2,
     max_value=8,
-    value=int(recommended_segments),
+    value=4,
     step=1
 )
 
