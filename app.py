@@ -653,6 +653,7 @@ boundaries, total_sse = (
 )
 
 segment_rows = []
+
 for i, (start_idx, end_idx) in enumerate(boundaries):
 
     segment_data = ldc.iloc[
@@ -794,7 +795,7 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
         line_color="black"
     )
 
- average_load = total_demand["Value"].mean()
+average_load = total_demand["Value"].mean()
 
 fig_ldc.add_hline(
     y=average_load,
