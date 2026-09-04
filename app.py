@@ -946,6 +946,181 @@ st.plotly_chart(
     use_container_width=True
 )
 
+st.subheader("Reserve Margin Analysis")
+
+reserve_curve = (
+    gap_df["ReserveMargin"]
+    .sort_values(ascending=False)
+    .reset_index(drop=True)
+)
+
+reserve_pct = (
+    (reserve_curve.index + 1)
+    / len(reserve_curve)
+    * 100
+)
+
+fig_reserve = go.Figure()
+
+fig_reserve.add_trace(
+    go.Scatter(
+        x=reserve_pct,
+        y=reserve_curve,
+        mode="lines",
+        name="Reserve Margin"
+    )
+)
+
+fig_reserve.add_hline(
+    y=5,
+    line_dash="dash",
+    annotation_text="5 MW Threshold"
+)
+
+st.plotly_chart(
+    fig_reserve,
+    use_container_width=True
+)
+
+r1,r2,r3,r4,r5 = st.columns(5)
+
+r1.metric(
+    "Minimum Reserve",
+    f"{gap_df['ReserveMargin'].min():,.2f}"
+)
+
+r2.metric(
+    "Median Reserve",
+    f"{gap_df['ReserveMargin'].median():,.2f}"
+)
+
+r3.metric(
+    "P10 Reserve",
+    f"{gap_df['ReserveMargin'].quantile(.10):,.2f}"
+)
+
+r4.metric(
+    "Hours < 5 MW",
+    (gap_df["ReserveMargin"] < 5).sum()
+)
+
+r5.metric(
+    "Hours < 0 MW",
+    (gap_df["ReserveMargin"] < 0).sum()
+)
+
+st.subheader("Shortage Event Analysis")
+
+gap_df["ShortageFlag"] = gap_df["ShortageMW"] > 0
+
+gap_df["EventID"] = (
+    gap_df["ShortageFlag"]
+    != gap_df["ShortageFlag"].shift()
+).cumsum()
+
+st.dataframe(
+    shortage_events,
+    height=350,
+    use_container_width=True
+)
+
+st.subheader("Plant Contribution Analysis")
+
+plant_summary = (
+    generation.groupby("Plant")
+    .agg(
+        AvgMW=("Value","mean"),
+        PeakMW=("Value","max"),
+        EnergyMWh=("Value","sum")
+    )
+    .reset_index()
+)
+
+plant_summary["Contribution %"] = (
+    plant_summary["EnergyMWh"]
+    /
+    plant_summary["EnergyMWh"].sum()
+    * 100
+)
+
+go.Bar(
+    x=plant_summary["Plant"],
+    y=plant_summary["EnergyMWh"]
+)
+
+st.subheader(
+    "Generation Mix at Peak Demand"
+)
+
+peak_mix = generation[
+    generation["Datetime"]
+    == peak_datetime
+].copy()
+
+peak_mix["Percent"] = (
+    peak_mix["Value"]
+    /
+    peak_mix["Value"].sum()
+    * 100
+)
+
+st.dataframe(
+    peak_mix.sort_values(
+        "Value",
+        ascending=False
+    ),
+    use_container_width=True
+)
+
+orientation="h"
+
+st.subheader(
+    "Plant Availability Matrix"
+)
+
+availability = (
+    generation.assign(
+        Online=
+        generation["Value"] > 0
+    )
+)
+
+heatmap_df = availability.pivot_table(
+    index="Plant",
+    columns="Datetime",
+    values="Online",
+    aggfunc="max"
+)
+
+st.subheader(
+    "Plant Utilization Analysis"
+)
+
+for plant in selected_plants:
+
+    fig_util.add_trace(
+        go.Box(
+            y=
+            generation.loc[
+                generation["Plant"] == plant,
+                "Value"
+            ],
+            name=plant
+        )
+    )
+
+demand_growth = st.sidebar.slider(
+    "Demand Growth %",
+    0,
+    30,
+    0
+)
+
+projected_peak = (
+    peak_demand
+    *
+    (1 + demand_growth/100)
+)
 
 # -----------------------------------------------------
 # GENERATION STACK
@@ -1090,9 +1265,12 @@ st.plotly_chart(
 # DRAG PLANT ORDER (BELOW CHART)
 # =====================================================
 
-st.subheader("Drag Plant Order")
+with st.expander(
+    "Plant Stack Order",
+    expanded=False
+):
 
-plant_order = sort_items(
-    items=plant_order,
-    direction="vertical"
-)
+    plant_order = sort_items(
+        items=plant_order,
+        direction="vertical"
+    )
