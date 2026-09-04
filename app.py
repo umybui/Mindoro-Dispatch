@@ -1018,6 +1018,26 @@ gap_df["EventID"] = (
     != gap_df["ShortageFlag"].shift()
 ).cumsum()
 
+events = []
+
+for event_id, grp in gap_df.groupby("EventID"):
+
+    if not grp["ShortageFlag"].iloccontinue
+
+    events.append({
+        "Start": grp["Datetime"].min(),
+        "End": grp["Datetime"].max(),
+        "Duration Hours": len(grp),
+        "Max Shortage MW": round(
+            grp["ShortageMW"].max(), 2
+        ),
+        "Unserved Energy MWh": round(
+            grp["ShortageMW"].sum(), 2
+        )
+    })
+
+shortage_events = pd.DataFrame(events)
+
 st.dataframe(
     shortage_events,
     height=350,
@@ -1043,9 +1063,32 @@ plant_summary["Contribution %"] = (
     * 100
 )
 
-go.Bar(
-    x=plant_summary["Plant"],
-    y=plant_summary["EnergyMWh"]
+fig_contrib = go.Figure()
+
+fig_contrib.add_trace(
+    go.Bar(
+        x=plant_summary["Plant"],
+        y=plant_summary["EnergyMWh"],
+        name="Energy"
+    )
+)
+
+fig_contrib.update_layout(
+    title="Plant Energy Contribution"
+)
+
+st.plotly_chart(
+    fig_contrib,
+    use_container_width=True
+)
+
+st.dataframe(
+    plant_summary.sort_values(
+        "EnergyMWh",
+        ascending=False
+    ),
+    use_container_width=True,
+    hide_index=True
 )
 
 st.subheader(
@@ -1072,7 +1115,11 @@ st.dataframe(
     use_container_width=True
 )
 
-orientation="h"
+go.Bar(
+    x=peak_mix["Value"],
+    y=peak_mix["Plant"],
+    orientation="h"
+)
 
 st.subheader(
     "Plant Availability Matrix"
@@ -1092,9 +1139,28 @@ heatmap_df = availability.pivot_table(
     aggfunc="max"
 )
 
+fig_heatmap = go.Figure(
+    data=go.Heatmap(
+        z=heatmap_df.fillna(False).astype(int),
+        x=heatmap_df.columns,
+        y=heatmap_df.index
+    )
+)
+
+fig_heatmap.update_layout(
+    height=600
+)
+
+st.plotly_chart(
+    fig_heatmap,
+    use_container_width=True
+)
+
 st.subheader(
     "Plant Utilization Analysis"
 )
+
+fig_util = go.Figure()
 
 for plant in selected_plants:
 
@@ -1109,6 +1175,16 @@ for plant in selected_plants:
         )
     )
 
+fig_util.update_layout(
+    title="Plant Utilization",
+    height=600
+)
+
+st.plotly_chart(
+    fig_util,
+    use_container_width=True
+)
+
 demand_growth = st.sidebar.slider(
     "Demand Growth %",
     0,
@@ -1121,6 +1197,24 @@ projected_peak = (
     *
     (1 + demand_growth/100)
 )
+
+st.subheader("Forecast Sandbox")
+
+f1, f2 = st.columns(2)
+
+with f1:
+    st.metric(
+        "Current Peak",
+        f"{peak_demand:,.2f} MW"
+    )
+
+with f2:
+    st.metric(
+        "Projected Peak",
+        f"{projected_peak:,.2f} MW"
+    )
+
+
 
 # -----------------------------------------------------
 # GENERATION STACK
