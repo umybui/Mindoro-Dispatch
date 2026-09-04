@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
+# =====================================================
+# PAGE
+# =====================================================
+
 st.set_page_config(
     page_title="Mindoro Dispatch Dashboard",
     layout="wide"
@@ -9,86 +13,123 @@ st.set_page_config(
 
 st.title("Mindoro Dispatch Dashboard")
 
+# =====================================================
+# FILE UPLOAD
+# =====================================================
+
 uploaded_file = st.file_uploader(
     "Upload mindoro dispatch.csv",
     type=["csv"]
 )
 
 if uploaded_file is None:
-    st.info("Please upload mindoro dispatch.csv")
     st.stop()
 
-# Read CSV
+# =====================================================
+# LOAD DATA
+# =====================================================
+
 df = pd.read_csv(uploaded_file)
 
-# Datetime conversion
 df["Datetime"] = pd.to_datetime(df["Datetime"])
 
-# Keep NET MW only
-df = df[df["Attribute"] == "NET MW"]
+df = df[df["Attribute"] == "NET MW"].copy()
 
-# Combined Total Demand
+df["Month"] = df["Datetime"].dt.month
+df["Day"] = df["Datetime"].dt.day
+
+# =====================================================
+# SIDEBAR FILTERS
+# =====================================================
+
+st.sidebar.header("Filters")
+
+month_names = {
+    1: "Jan",
+    2: "Feb",
+    3: "Mar",
+    4: "Apr",
+    5: "May",
+    6: "Jun",
+    7: "Jul",
+    8: "Aug",
+    9: "Sep",
+    10: "Oct",
+    11: "Nov",
+    12: "Dec"
+}
+
+available_months = sorted(df["Month"].unique())
+
+selected_months = st.sidebar.multiselect(
+    "Month",
+    options=available_months,
+    default=available_months,
+    format_func=lambda x: month_names[x]
+)
+
+available_days = sorted(df["Day"].unique())
+
+selected_days = st.sidebar.multiselect(
+    "Day of Month",
+    options=available_days,
+    default=available_days
+)
+
+sort_option = st.sidebar.selectbox(
+    "Plant Order",
+    [
+        "Alphabetical",
+        "Largest Generator First",
+        "Smallest Generator First"
+    ]
+)
+
+show_demand = st.sidebar.checkbox(
+    "Show Total Demand",
+    value=True
+)
+
+# =====================================================
+# APPLY FILTERS
+# =====================================================
+
+filtered = df[
+    (df["Month"].isin(selected_months)) &
+    (df["Day"].isin(selected_days))
+].copy()
+
+# =====================================================
+# TOTAL DEMAND
+# =====================================================
+
 total_demand = (
-    df[df["Plant"] == "TOTAL DEMAND"]
+    filtered[filtered["Plant"] == "TOTAL DEMAND"]
     .groupby("Datetime", as_index=False)["Value"]
     .sum()
 )
 
-# Generation plants only
-generation = df[
-    ~df["Plant"].isin([
+# =====================================================
+# GENERATORS
+# =====================================================
+
+generation = filtered[
+    ~filtered["Plant"].isin([
         "TOTAL DEMAND",
         "TOTAL GENERATION DISPATCH",
         "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
     ])
 ]
 
-fig = go.Figure()
+# =====================================================
+# SORT ORDER
+# =====================================================
 
-# Stacked Areas
-for plant in sorted(generation["Plant"].unique()):
-
-    temp = generation[generation["Plant"] == plant]
-
-    fig.add_trace(
-        go.Scatter(
-            x=temp["Datetime"],
-            y=temp["Value"],
-            name=plant,
-            mode="lines",
-            stackgroup="generation"
-        )
-    )
-
-# Total Demand Line
-fig.add_trace(
-    go.Scatter(
-        x=total_demand["Datetime"],
-        y=total_demand["Value"],
-        name="TOTAL DEMAND",
-        mode="lines",
-        line=dict(
-            color="black",
-            width=4
-        )
-    )
+plant_stats = (
+    generation
+    .groupby("Plant")["Value"]
+    .mean()
+    .reset_index()
 )
 
-fig.update_layout(
-    title="Mindoro Dispatch (NET MW)",
-    hovermode="x unified",
-    height=800,
-    xaxis_title="Datetime",
-    yaxis_title="MW",
-    legend_title="Plant"
-)
-
-# Slider
-fig.update_xaxes(
-    rangeslider_visible=True
-)
-
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
+if sort_
