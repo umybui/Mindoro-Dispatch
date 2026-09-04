@@ -502,6 +502,145 @@ with b2:
         use_container_width=True
     )
 
+average_load = total_demand["Value"].mean()
+
+load_factor = (
+    average_load
+    / peak_demand
+    * 100
+)
+
+st.metric(
+    "Load Factor",
+    f"{load_factor:.1f}%"
+)
+
+# =====================================================
+# LOAD DURATION CURVE SETTINGS
+# =====================================================
+
+st.sidebar.subheader("LDC Parameters")
+
+peak_cutoff = st.sidebar.number_input(
+    "Peak Region (%)",
+    min_value=1,
+    max_value=99,
+    value=20,
+    step=1
+)
+
+baseload_cutoff = st.sidebar.number_input(
+    "Baseload Region Start (%)",
+    min_value=1,
+    max_value=99,
+    value=80,
+    step=1
+)
+
+fig_ldc.add_vline(
+    x=peak_cutoff,
+    line_dash="dot",
+    line_color="red",
+    annotation_text="Peak"
+)
+
+fig_ldc.add_vline(
+    x=baseload_cutoff,
+    line_dash="dot",
+    line_color="green",
+    annotation_text="Baseload"
+)
+
+# Peak Region
+
+fig_ldc.add_vrect(
+    x0=0,
+    x1=peak_cutoff,
+    fillcolor="red",
+    opacity=0.08,
+    line_width=0,
+    annotation_text="Peak"
+)
+
+# Mid Merit
+
+fig_ldc.add_vrect(
+    x0=peak_cutoff,
+    x1=baseload_cutoff,
+    fillcolor="yellow",
+    opacity=0.08,
+    line_width=0,
+    annotation_text="Mid-Merit"
+)
+
+# Baseload
+
+fig_ldc.add_vrect(
+    x0=baseload_cutoff,
+    x1=100,
+    fillcolor="green",
+    opacity=0.08,
+    line_width=0,
+    annotation_text="Baseload"
+)
+
+# =====================================================
+# LOAD DURATION CURVE
+# =====================================================
+
+st.subheader("Load Duration Curve")
+
+ldc = (
+    total_demand["Value"]
+    .sort_values(ascending=False)
+    .reset_index(drop=True)
+)
+
+ldc_pct = (
+    (ldc.index + 1)
+    / len(ldc)
+    * 100
+)
+
+fig_ldc = go.Figure()
+
+fig_ldc.add_trace(
+    go.Scatter(
+        x=ldc_pct,
+        y=ldc,
+        mode="lines",
+        name="Demand",
+        line=dict(
+            color="black",
+            width=3
+        )
+    )
+)
+
+average_load = total_demand["Value"].mean()
+
+fig_ldc.add_hline(
+    y=average_load,
+    line_dash="dash",
+    annotation_text=(
+        f"Average Load "
+        f"({average_load:,.2f} MW)"
+    )
+)
+
+fig_ldc.update_layout(
+    title="Load Duration Curve",
+    xaxis_title="Percent of Time Exceeded (%)",
+    yaxis_title="Demand (MW)",
+    height=500,
+    hovermode="x unified"
+)
+
+st.plotly_chart(
+    fig_ldc,
+    use_container_width=True
+)
+
 
 
 # -----------------------------------------------------
