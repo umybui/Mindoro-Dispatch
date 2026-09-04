@@ -1029,20 +1029,16 @@ for event_id, grp in gap_df.groupby("EventID"):
         "End": grp["Datetime"].max(),
         "Duration Hours": len(grp),
         "Max Shortage MW": round(
-            grp["ShortageMW"].max(), 2
+            grp["ShortageMW"].max(),
+            2
         ),
         "Unserved Energy MWh": round(
-            grp["ShortageMW"].sum(), 2
+            grp["ShortageMW"].sum(),
+            2
         )
     })
 
 shortage_events = pd.DataFrame(events)
-
-st.dataframe(
-    shortage_events,
-    height=350,
-    use_container_width=True
-)
 
 st.subheader("Plant Contribution Analysis")
 
