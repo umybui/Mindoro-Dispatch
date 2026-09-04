@@ -35,10 +35,8 @@ df = pd.read_csv(uploaded_file)
 
 df["Datetime"] = pd.to_datetime(df["Datetime"])
 
-# NET MW only
 df = df[df["Attribute"] == "NET MW"].copy()
 
-# Helper columns
 df["Month"] = df["Datetime"].dt.month
 df["Day"] = df["Datetime"].dt.day
 
@@ -76,6 +74,10 @@ selected_workbooks = st.sidebar.multiselect(
     format_func=lambda x: workbook_map[x]
 )
 
+# =====================================================
+# MONTH FILTER
+# =====================================================
+
 month_names = {
     1: "Jan",
     2: "Feb",
@@ -91,11 +93,9 @@ month_names = {
     12: "Dec"
 }
 
-# =====================================================
-# MONTH FILTER
-# =====================================================
-
-available_months = sorted(df["Month"].unique())
+available_months = sorted(
+    df["Month"].unique()
+)
 
 selected_months = st.sidebar.multiselect(
     "Month",
@@ -108,7 +108,9 @@ selected_months = st.sidebar.multiselect(
 # DAY FILTER
 # =====================================================
 
-available_days = sorted(df["Day"].unique())
+available_days = sorted(
+    df["Day"].unique()
+)
 
 selected_days = st.sidebar.multiselect(
     "Day of Month",
@@ -117,7 +119,7 @@ selected_days = st.sidebar.multiselect(
 )
 
 # =====================================================
-# TOTAL DEMAND TOGGLE
+# SHOW DEMAND
 # =====================================================
 
 show_demand = st.sidebar.checkbox(
@@ -142,8 +144,13 @@ filtered = df[
 # =====================================================
 
 total_demand = (
-    filtered[filtered["Plant"] == "TOTAL DEMAND"]
-    .groupby("Datetime", as_index=False)["Value"]
+    filtered[
+        filtered["Plant"] == "TOTAL DEMAND"
+    ]
+    .groupby(
+        "Datetime",
+        as_index=False
+    )["Value"]
     .sum()
 )
 
@@ -158,6 +165,66 @@ generation = filtered[
         "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
     ])
 ].copy()
+
+# =====================================================
+# TOTAL GENERATION
+# =====================================================
+
+total_generation = (
+    generation
+    .groupby(
+        "Datetime",
+        as_index=False
+    )["Value"]
+    .sum()
+)
+
+total_generation.rename(
+    columns={
+        "Value": "TotalGeneration"
+    },
+    inplace=True
+)
+
+# =====================================================
+# KPI DATA
+# =====================================================
+
+peak_demand = total_demand["Value"].max()
+
+average_demand = total_demand["Value"].mean()
+
+peak_row = total_demand.loc[
+    total_demand["Value"].idxmax()
+]
+
+peak_datetime = peak_row["Datetime"]
+
+# =====================================================
+# KPI CARDS
+# =====================================================
+
+kpi1, kpi2, kpi3 = st.columns(3)
+
+with kpi1:
+    st.metric(
+        "Peak Demand (MW)",
+        f"{peak_demand:,.2f}"
+    )
+
+with kpi2:
+    st.metric(
+        "Average Demand (MW)",
+        f"{average_demand:,.2f}"
+    )
+
+with kpi3:
+    st.metric(
+        "Peak Demand Time",
+        peak_datetime.strftime(
+            "%Y-%m-%d %H:%M"
+        )
+    )
 
 # =====================================================
 # INITIAL SORT
@@ -208,10 +275,12 @@ else:
     )
 
 # =====================================================
-# DRAG & DROP STACK ORDER
+# DRAG & DROP ORDER
 # =====================================================
 
-st.sidebar.subheader("Drag Plant Order")
+st.sidebar.subheader(
+    "Drag Plant Order"
+)
 
 plant_order = sort_items(
     items=plant_order,
@@ -229,7 +298,9 @@ selected_plants = st.sidebar.multiselect(
 )
 
 generation = generation[
-    generation["Plant"].isin(selected_plants)
+    generation["Plant"].isin(
+        selected_plants
+    )
 ]
 
 # =====================================================
@@ -258,6 +329,23 @@ for plant in plant_order:
     )
 
 # =====================================================
+# TOTAL GENERATION LINE
+# =====================================================
+
+fig.add_trace(
+    go.Scatter(
+        x=total_generation["Datetime"],
+        y=total_generation["TotalGeneration"],
+        name="TOTAL GENERATION",
+        mode="lines",
+        line=dict(
+            color="red",
+            width=2
+        )
+    )
+)
+
+# =====================================================
 # TOTAL DEMAND LINE
 # =====================================================
 
@@ -275,6 +363,14 @@ if show_demand:
             )
         )
     )
+
+# =====================================================
+# HOVER FORMAT
+# =====================================================
+
+fig.update_traces(
+    hovertemplate="%{fullData.name}: %{y:.2f} MW"
+)
 
 # =====================================================
 # FORMAT
