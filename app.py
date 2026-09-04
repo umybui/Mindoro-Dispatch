@@ -556,19 +556,34 @@ for i in range(num_segments):
 
     segment_data = ldc.iloc[start_idx:end_idx]
 
-    segment_rows.append({
-        "Segment": f"S{i+1}",
-        "Avg MW": round(segment_data.mean(), 2),
-        "Max MW": round(segment_data.max(), 2),
-        "Min MW": round(segment_data.min(), 2),
-        "Hours": len(segment_data),
-        "% Time": round(
-            len(segment_data)
-            / len(ldc)
-            * 100,
-            2
-        )
-    })
+segment_mean = segment_data.mean()
+
+segment_sse = (
+    (segment_data - segment_mean) ** 2
+).sum()
+
+segment_rows.append({
+    ...
+    "SSE": round(segment_sse, 0)
+})
+
+segment_rows.append({
+    "Segment": f"S{i+1}",
+    "Avg MW": round(segment_data.mean(), 2),
+    "Max MW": round(segment_data.max(), 2),
+    "Min MW": round(segment_data.min(), 2),
+    "Hours": len(segment_data),
+    "% Time": round(
+        len(segment_data)
+        / len(ldc)
+        * 100,
+        2
+    ),
+    "Energy (MWh)": round(
+        segment_data.sum(),
+        2
+    )
+})
 
 segment_table = pd.DataFrame(
     segment_rows
@@ -642,47 +657,6 @@ for i in range(num_segments):
         line_dash="dot",
         line_color="black"
     )
-
-fig_ldc.add_vline(
-    x=peak_cutoff,
-    line_dash="dot",
-    line_color="red",
-    annotation_text="Peak"
-)
-
-fig_ldc.add_vline(
-    x=baseload_cutoff,
-    line_dash="dot",
-    line_color="green",
-    annotation_text="Baseload"
-)
-
-fig_ldc.add_vrect(
-    x0=0,
-    x1=peak_cutoff,
-    fillcolor="red",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Peak"
-)
-
-fig_ldc.add_vrect(
-    x0=peak_cutoff,
-    x1=baseload_cutoff,
-    fillcolor="yellow",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Mid-Merit"
-)
-
-fig_ldc.add_vrect(
-    x0=baseload_cutoff,
-    x1=100,
-    fillcolor="green",
-    opacity=0.08,
-    line_width=0,
-    annotation_text="Baseload"
-)
 
 average_load = total_demand["Value"].mean()
 
