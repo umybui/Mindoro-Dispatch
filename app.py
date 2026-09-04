@@ -228,6 +228,13 @@ max_shortage = max(
     0
 )
 
+unserved_energy = (
+    gap_df.loc[
+        gap_df["ShortageMW"] > 0,
+        "ShortageMW"
+    ].sum()
+)
+
 hours_low_reserve = (
     gap_df["ReserveMargin"] < 5
 ).sum()
@@ -304,7 +311,7 @@ generation = generation[
 # KPI DISPLAY
 # =====================================================
 
-k1, k2, k3, k4, k5 = st.columns(5)
+k1, k2, k3, k4, k5, k6 = st.columns(6)
 
 with k1:
     st.metric(
@@ -314,27 +321,70 @@ with k1:
 
 with k2:
     st.metric(
-        "Hours with Shortage",
-        f"{hours_with_shortage:,}"
-    )
-
-with k3:
-    st.metric(
         "Maximum Shortage",
         f"{max_shortage:,.2f} MW"
     )
 
+with k3:
+    st.metric(
+        "Unserved Energy",
+        f"{unserved_energy:,.2f} MWh"
+    )
+
 with k4:
+    st.metric(
+        "Hours with Shortage",
+        f"{hours_with_shortage:,}"
+    )
+
+with k5:
     st.metric(
         "Low Reserve Hours (<5 MW)",
         f"{hours_low_reserve:,}"
     )
 
-with k5:
+with k6:
     st.metric(
         "Peak Demand Time",
-        peak_datetime.strftime("%Y-%m-%d %H:%M")
+        peak_datetime.strftime(
+            "%Y-%m-%d %H:%M"
+        )
     )
+
+gap_df["MonthName"] = (
+    gap_df["Datetime"]
+    .dt.strftime("%b")
+)
+
+monthly_summary = (
+    gap_df
+    .groupby("MonthName")
+    .agg(
+        PeakDemand=("TotalDemand", "max"),
+        MaxShortage=("ShortageMW", "max"),
+        HoursWithShortage=(
+            "ShortageMW",
+            lambda x: (x > 0).sum()
+        ),
+        LowReserveHours=(
+            "ReserveMargin",
+            lambda x: (x < 5).sum()
+        ),
+        UnservedEnergy=(
+            "ShortageMW",
+            lambda x: x.clip(lower=0).sum()
+        )
+    )
+    .reset_index()
+)
+
+st.caption("Monthly Performance Summary")
+
+st.dataframe(
+    monthly_summary,
+    use_container_width=True,
+    hide_index=True
+)
 
 # =====================================================
 # CHART
