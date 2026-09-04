@@ -35,10 +35,8 @@ df = pd.read_csv(uploaded_file)
 
 df["Datetime"] = pd.to_datetime(df["Datetime"])
 
-# NET MW only
 df = df[df["Attribute"] == "NET MW"].copy()
 
-# Helper columns
 df["Month"] = df["Datetime"].dt.month
 df["Day"] = df["Datetime"].dt.day
 
@@ -76,6 +74,10 @@ selected_workbooks = st.sidebar.multiselect(
     format_func=lambda x: workbook_map[x]
 )
 
+# =====================================================
+# MONTH FILTER
+# =====================================================
+
 month_names = {
     1: "Jan",
     2: "Feb",
@@ -90,10 +92,6 @@ month_names = {
     11: "Nov",
     12: "Dec"
 }
-
-# =====================================================
-# MONTH FILTER
-# =====================================================
 
 available_months = sorted(df["Month"].unique())
 
@@ -117,7 +115,7 @@ selected_days = st.sidebar.multiselect(
 )
 
 # =====================================================
-# TOTAL DEMAND TOGGLE
+# SHOW DEMAND
 # =====================================================
 
 show_demand = st.sidebar.checkbox(
@@ -142,8 +140,13 @@ filtered = df[
 # =====================================================
 
 total_demand = (
-    filtered[filtered["Plant"] == "TOTAL DEMAND"]
-    .groupby("Datetime", as_index=False)["Value"]
+    filtered[
+        filtered["Plant"] == "TOTAL DEMAND"
+    ]
+    .groupby(
+        "Datetime",
+        as_index=False
+    )["Value"]
     .sum()
 )
 
@@ -158,6 +161,88 @@ generation = filtered[
         "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
     ])
 ].copy()
+
+# =====================================================
+# TOTAL GENERATION
+# =====================================================
+
+total_generation = (
+    generation
+    .groupby(
+        "Datetime",
+        as_index=False
+    )["Value"]
+    .sum()
+)
+
+total_generation.rename(
+    columns={
+        "Value": "TotalGeneration"
+    },
+    inplace=True
+)
+
+# =====================================================
+# KPI DATA
+# =====================================================
+
+gap_df = total_demand.merge(
+    total_generation,
+    on="Datetime",
+    how="inner"
+)
+
+gap_df.rename(
+    columns={
+        "Value": "TotalDemand"
+    },
+    inplace=True
+)
+
+gap_df["ShortageMW"] = (
+    gap_df["TotalDemand"]
+    - gap_df["TotalGeneration"]
+)
+
+gap_df["ShortageArea"] = gap_df["ShortageMW"].clip(lower=0)
+
+gap_df["ReserveMargin"] = (
+    gap_df["TotalGeneration"]
+    - gap_df["TotalDemand"]
+)
+
+peak_demand = gap_df["TotalDemand"].max()
+
+peak_row = gap_df.loc[
+    gap_df["TotalDemand"].idxmax()
+]
+
+peak_datetime = peak_row["Datetime"]
+
+hours_with_shortage = (
+    gap_df["ShortageMW"] > 0
+).sum()
+
+max_shortage = max(
+    gap_df["ShortageMW"].max(),
+    0
+)
+
+unserved_energy = (
+    gap_df.loc[
+        gap_df["ShortageMW"] > 0,
+        "ShortageMW"
+    ].sum()
+)
+
+hours_low_reserve = (
+    gap_df["ReserveMargin"] < 5
+).sum()
+
+total_shortage_mwh = gap_df.loc[
+    gap_df["ShortageMW"] > 0,
+    "ShortageMW"
+].sum()
 
 # =====================================================
 # INITIAL SORT
@@ -208,17 +293,6 @@ else:
     )
 
 # =====================================================
-# DRAG & DROP STACK ORDER
-# =====================================================
-
-st.sidebar.subheader("Drag Plant Order")
-
-plant_order = sort_items(
-    items=plant_order,
-    direction="vertical"
-)
-
-# =====================================================
 # PLANT FILTER
 # =====================================================
 
@@ -232,11 +306,95 @@ generation = generation[
     generation["Plant"].isin(selected_plants)
 ]
 
+
+# =====================================================
+# KPI DISPLAY
+# =====================================================
+
+k1, k2, k3, k4, k5, k6 = st.columns(6)
+
+with k1:
+    st.metric(
+        "Peak Demand",
+        f"{peak_demand:,.2f} MW"
+    )
+
+with k2:
+    st.metric(
+        "Maximum Shortage",
+        f"{max_shortage:,.2f} MW"
+    )
+
+with k3:
+    st.metric(
+        "Unserved Energy",
+        f"{unserved_energy:,.2f} MWh"
+    )
+
+with k4:
+    st.metric(
+        "Hours with Shortage",
+        f"{hours_with_shortage:,}"
+    )
+
+with k5:
+    st.metric(
+        "Low Reserve Hours (<5 MW)",
+        f"{hours_low_reserve:,}"
+    )
+
+with k6:
+    st.metric(
+        "Peak Demand Time",
+        peak_datetime.strftime(
+            "%Y-%m-%d %H:%M"
+        )
+    )
+
+gap_df["MonthName"] = (
+    gap_df["Datetime"]
+    .dt.strftime("%b")
+)
+
+monthly_summary = (
+    gap_df
+    .groupby("MonthName")
+    .agg(
+        PeakDemand=("TotalDemand", "max"),
+        MaxShortage=("ShortageMW", "max"),
+        HoursWithShortage=(
+            "ShortageMW",
+            lambda x: (x > 0).sum()
+        ),
+        LowReserveHours=(
+            "ReserveMargin",
+            lambda x: (x < 5).sum()
+        ),
+        UnservedEnergy=(
+            "ShortageMW",
+            lambda x: x.clip(lower=0).sum()
+        )
+    )
+    .reset_index()
+)
+
+st.caption("Monthly Performance Summary")
+
+st.dataframe(
+    monthly_summary,
+    use_container_width=True,
+    hide_index=True
+)
+
 # =====================================================
 # CHART
 # =====================================================
 
 fig = go.Figure()
+
+# -----------------------------------------------------
+# GENERATION STACK
+# -----------------------------------------------------
 
 for plant in plant_order:
 
@@ -257,9 +415,67 @@ for plant in plant_order:
         )
     )
 
-# =====================================================
-# TOTAL DEMAND LINE
-# =====================================================
+# -----------------------------------------------------
+# SHORTAGE CALCULATION
+# -----------------------------------------------------
+
+gap_df["ShortageArea"] = (
+    gap_df["TotalDemand"]
+    - gap_df["TotalGeneration"]
+).clip(lower=0)
+
+# -----------------------------------------------------
+# ORANGE SHORTAGE SHADE
+# -----------------------------------------------------
+
+fig.add_trace(
+    go.Scatter(
+        x=gap_df["Datetime"],
+        y=gap_df["TotalGeneration"],
+        mode="lines",
+        line=dict(width=0),
+        hoverinfo="skip",
+        showlegend=False
+    )
+)
+
+fig.add_trace(
+    go.Scatter(
+        x=gap_df["Datetime"],
+        y=gap_df["TotalGeneration"]
+        + gap_df["ShortageArea"],
+        mode="lines",
+        fill="tonexty",
+        fillcolor="rgba(255,140,0,0.80)",
+        line=dict(width=0),
+        name="SHORTAGE",
+        customdata=gap_df["ShortageArea"],
+        hovertemplate=
+            "SHORTAGE: %{customdata:.2f} MW"
+            "<extra></extra>"
+    )
+)
+
+# -----------------------------------------------------
+# TOTAL GENERATION
+# -----------------------------------------------------
+
+fig.add_trace(
+    go.Scatter(
+        x=total_generation["Datetime"],
+        y=total_generation["TotalGeneration"],
+        name="TOTAL GENERATION",
+        mode="lines",
+        line=dict(
+            color="red",
+            width=2
+        )
+    )
+)
+
+# -----------------------------------------------------
+# TOTAL DEMAND
+# -----------------------------------------------------
 
 if show_demand:
 
@@ -276,9 +492,22 @@ if show_demand:
         )
     )
 
-# =====================================================
-# FORMAT
-# =====================================================
+# -----------------------------------------------------
+# HOVER FORMAT
+# -----------------------------------------------------
+
+for trace in fig.data:
+
+    if trace.name != "SHORTAGE":
+
+        trace.hovertemplate = (
+            "%{fullData.name}: %{y:.2f} MW"
+            "<extra></extra>"
+        )
+
+# -----------------------------------------------------
+# LAYOUT
+# -----------------------------------------------------
 
 fig.update_layout(
     title="Mindoro Dispatch (NET MW)",
@@ -293,11 +522,22 @@ fig.update_xaxes(
     rangeslider_visible=True
 )
 
-# =====================================================
+# -----------------------------------------------------
 # DISPLAY
-# =====================================================
+# -----------------------------------------------------
 
 st.plotly_chart(
     fig,
     use_container_width=True
+)
+
+# =====================================================
+# DRAG PLANT ORDER (BELOW CHART)
+# =====================================================
+
+st.subheader("Drag Plant Order")
+
+plant_order = sort_items(
+    items=plant_order,
+    direction="vertical"
 )
