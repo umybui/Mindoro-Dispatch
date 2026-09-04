@@ -562,9 +562,32 @@ segment_sse = (
     (segment_data - segment_mean) ** 2
 ).sum()
 
+segment_mean = segment_data.mean()
+
+segment_sse = (
+    (segment_data - segment_mean) ** 2
+).sum()
+
 segment_rows.append({
-    ...
-    "SSE": round(segment_sse, 0)
+    "Segment": f"S{i+1}",
+    "Avg MW": round(segment_mean, 2),
+    "Max MW": round(segment_data.max(), 2),
+    "Min MW": round(segment_data.min(), 2),
+    "Hours": len(segment_data),
+    "% Time": round(
+        len(segment_data)
+        / len(ldc)
+        * 100,
+        2
+    ),
+    "Energy (MWh)": round(
+        segment_data.sum(),
+        2
+    ),
+    "SSE": round(
+        segment_sse,
+        0
+    )
 })
 
 segment_rows.append({
