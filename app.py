@@ -1160,6 +1160,24 @@ available_capacity = (
     .max()
 )
 
+if reserve_margin_pct >= 15:
+    st.success(
+        "System capacity appears adequate."
+    )
+
+elif reserve_margin_pct >= 0:
+    st.warning(
+        "System has limited reserve margin."
+    )
+
+else:
+    st.error(
+        "Projected demand exceeds available capacity."
+    )
+
+st.subheader("Forecast Sandbox")
+
+
 st.metric(
     "Available Capacity",
     f"{available_capacity:,.2f} MW"
@@ -1168,6 +1186,12 @@ st.metric(
 capacity_margin = (
     available_capacity
     - projected_peak
+)
+
+reserve_margin_pct = (
+    capacity_margin
+    / projected_peak
+    * 100
 )
 
 st.metric(
@@ -1189,18 +1213,14 @@ if reserve_margin_pct >= 15:
     st.success(
         "System capacity appears adequate."
     )
-
 elif reserve_margin_pct >= 0:
     st.warning(
         "System has limited reserve margin."
     )
-
 else:
     st.error(
         "Projected demand exceeds available capacity."
     )
-
-st.subheader("Forecast Sandbox")
 
 f1, f2, f3, f4 = st.columns(4)
 
