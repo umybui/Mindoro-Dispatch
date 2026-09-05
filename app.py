@@ -1167,19 +1167,13 @@ planning_horizon = 10
 
 projected_peak = (
     peak_demand
-    * (1 + annual_growth / 100) ** planning_horizon
-)
-
-projected_peak = (
-    peak_demand
-    * (1 + growth_rate / 100) ** years_ahead
+    * (1 + growth_rate / 100) ** planning_horizon
 )
 
 available_capacity = (
     total_generation["TotalGeneration"]
     .max()
 )
-
 
 capacity_margin = (
     available_capacity
@@ -1209,7 +1203,7 @@ with f1:
 
 with f2:
     st.metric(
-        f"Projected Peak Demand ({years_ahead} Year{'s' if years_ahead > 1 else ''})",
+        "Projected Peak Demand (10-Year)",
         f"{projected_peak:,.2f} MW"
     )
 
@@ -1241,10 +1235,10 @@ projection_rows = []
 
 for yr in range(0, 11):
 
-    projected = (
-        peak_demand
-        * (1 + annual_growth / 100) ** yr
-    )
+   projected = (
+    peak_demand
+    * (1 + growth_rate / 100) ** yr
+)
 
     reserve = (
         available_capacity
