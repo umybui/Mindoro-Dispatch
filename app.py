@@ -1160,6 +1160,18 @@ available_capacity = (
     .max()
 )
 
+
+capacity_margin = (
+    available_capacity
+    - projected_peak
+)
+
+reserve_margin_pct = (
+    capacity_margin
+    / projected_peak
+    * 100
+)
+
 if reserve_margin_pct >= 15:
     st.success(
         "System capacity appears adequate."
@@ -1181,17 +1193,6 @@ st.subheader("Forecast Sandbox")
 st.metric(
     "Available Capacity",
     f"{available_capacity:,.2f} MW"
-)
-
-capacity_margin = (
-    available_capacity
-    - projected_peak
-)
-
-reserve_margin_pct = (
-    capacity_margin
-    / projected_peak
-    * 100
 )
 
 st.metric(
