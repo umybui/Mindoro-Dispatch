@@ -1155,17 +1155,24 @@ st.plotly_chart(
     use_container_width=True
 )
 
-demand_growth = st.sidebar.slider(
-    "Demand Growth %",
-    0,
-    30,
-    0
+growth_rate = st.sidebar.slider(
+    "Annual Demand Growth (%)",
+    0.0,
+    10.0,
+    3.0,
+    0.1
+)
+
+years_ahead = st.sidebar.slider(
+    "Years Ahead",
+    1,
+    10,
+    1
 )
 
 projected_peak = (
     peak_demand
-    *
-    (1 + demand_growth/100)
+    * (1 + growth_rate / 100) ** years_ahead
 )
 
 available_capacity = (
@@ -1190,34 +1197,19 @@ required_new_capacity = max(
     0
 )
 
-if reserve_margin_pct >= 15:
-    st.success(
-        "System capacity appears adequate."
-    )
-
-elif reserve_margin_pct >= 0:
-    st.warning(
-        "System has limited reserve margin."
-    )
-
-else:
-    st.error(
-        "Projected demand exceeds available capacity."
-    )
-
-st.subheader("Forecast Sandbox")
+st.subheader("Demand Growth & Capacity Outlook")
 
 f1, f2, f3, f4 = st.columns(4)
 
 with f1:
     st.metric(
-        "Current Peak",
+        "Current Peak Demand",
         f"{peak_demand:,.2f} MW"
     )
 
 with f2:
     st.metric(
-        "Projected Peak",
+        f"Projected Peak Demand ({years_ahead} Year{'s' if years_ahead > 1 else ''})",
         f"{projected_peak:,.2f} MW"
     )
 
@@ -1239,19 +1231,11 @@ st.metric(
 )
 
 if reserve_margin_pct >= 15:
-    st.success(
-        "System capacity appears adequate."
-    )
-
+    st.success("System capacity appears adequate.")
 elif reserve_margin_pct >= 0:
-    st.warning(
-        "System has limited reserve margin."
-    )
-
+    st.warning("System has limited reserve margin.")
 else:
-    st.error(
-        "Projected demand exceeds available capacity."
-    )
+    st.error("Projected demand exceeds available capacity.")
 
 # -----------------------------------------------------
 # GENERATION STACK
