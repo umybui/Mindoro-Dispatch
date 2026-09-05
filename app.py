@@ -1202,34 +1202,6 @@ else:
 
 st.subheader("Forecast Sandbox")
 
-
-st.metric(
-    "Available Capacity",
-    f"{available_capacity:,.2f} MW"
-)
-
-st.metric(
-    "Reserve Margin",
-    f"{reserve_margin_pct:.1f}%"
-)
-
-required_new_capacity = max(
-    projected_peak - available_capacity,
-    0
-)
-
-st.metric(
-    "Required New Capacity",
-    f"{required_new_capacity:,.2f} MW"
-)
-
-required_new_capacity = max(
-    projected_peak - available_capacity,
-    0
-)
-
-st.subheader("Forecast Sandbox")
-
 f1, f2, f3, f4 = st.columns(4)
 
 with f1:
