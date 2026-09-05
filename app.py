@@ -1022,7 +1022,8 @@ events = []
 
 for event_id, grp in gap_df.groupby("EventID"):
 
-    if not grp["ShortageFlag"].iloccontinue
+    if not grp["ShortageFlag"].iloc[0]:
+        continue
 
     events.append({
         "Start": grp["Datetime"].min(),
