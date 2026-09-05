@@ -1238,7 +1238,7 @@ for yr in range(0, 11):
    projected = (
     peak_demand
     * (1 + growth_rate / 100) ** yr
-)
+    )
 
     reserve = (
         available_capacity
