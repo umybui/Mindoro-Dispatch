@@ -1155,9 +1155,54 @@ projected_peak = (
     (1 + demand_growth/100)
 )
 
+available_capacity = (
+    total_generation["TotalGeneration"]
+    .max()
+)
+
+st.metric(
+    "Available Capacity",
+    f"{available_capacity:,.2f} MW"
+)
+
+capacity_margin = (
+    available_capacity
+    - projected_peak
+)
+
+st.metric(
+    "Reserve Margin",
+    f"{reserve_margin_pct:.1f}%"
+)
+
+required_new_capacity = max(
+    projected_peak - available_capacity,
+    0
+)
+
+st.metric(
+    "Required New Capacity",
+    f"{required_new_capacity:,.2f} MW"
+)
+
+if reserve_margin_pct >= 15:
+    st.success(
+        "System capacity appears adequate."
+    )
+
+elif reserve_margin_pct >= 0:
+    st.warning(
+        "System has limited reserve margin."
+    )
+
+else:
+    st.error(
+        "Projected demand exceeds available capacity."
+    )
+
 st.subheader("Forecast Sandbox")
 
-f1, f2 = st.columns(2)
+f1, f2, f3, f4 = st.columns(4)
 
 with f1:
     st.metric(
@@ -1171,7 +1216,22 @@ with f2:
         f"{projected_peak:,.2f} MW"
     )
 
+with f3:
+    st.metric(
+        "Available Capacity",
+        f"{available_capacity:,.2f} MW"
+    )
 
+with f4:
+    st.metric(
+        "Reserve Margin",
+        f"{reserve_margin_pct:.1f}%"
+    )
+
+st.metric(
+    "Required New Capacity",
+    f"{required_new_capacity:,.2f} MW"
+)
 
 # -----------------------------------------------------
 # GENERATION STACK
