@@ -1253,15 +1253,33 @@ for yr in range(0, 11):
 
     projection_rows.append({
         "Year": yr,
-        "Projected Peak MW": round(projected, 2),
-        "Capacity Margin MW": round(reserve, 2),
+        "Projected Peak MW": round(
+            projected,
+            2
+        ),
+        "Capacity Margin MW": round(
+            reserve,
+            2
+        ),
         "Additional Capacity Needed MW": round(
             max(-reserve, 0),
             2
         )
     })
 
-projection_df =
+projection_df = pd.DataFrame(
+    projection_rows
+)
+
+st.caption(
+    "10-Year Capacity Planning Outlook"
+)
+
+st.dataframe(
+    projection_df,
+    use_container_width=True,
+    hide_index=True
+)
 
 # -----------------------------------------------------
 # GENERATION STACK
