@@ -1261,7 +1261,29 @@ st.metric(
     f"{required_new_capacity:,.2f} MW"
 )
 
-if reserve_margin_pct >= 15
+if reserve_margin_pct >= 15:
+    st.success(
+        "System capacity appears adequate."
+    )
+
+elif reserve_margin_pct >= 0:
+    st.warning(
+        "System has limited reserve margin."
+    )
+
+else:
+    st.error(
+        "Projected demand exceeds available capacity."
+    )
+elif reserve_margin_pct >= 0:
+    st.warning(
+        "System has limited reserve margin."
+    )
+
+else:
+    st.error(
+        "Projected demand exceeds available capacity."
+    )
 
 f1, f2, f3, f4 = st.columns(4)
 
