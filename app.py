@@ -1107,7 +1107,39 @@ peak_mix = generation[
 ].copy()
 
 peak_mix["Percent"] = (
-  
+    peak_mix["Value"]
+    / peak_mix["Value"].sum()
+    * 100
+)
+
+peak_mix_display = (
+    peak_mix[
+        [
+            "Plant",
+            "Value",
+            "Percent"
+        ]
+    ]
+    .sort_values(
+        "Value",
+        ascending=False
+    )
+)
+
+st.dataframe(
+    peak_mix_display,
+    use_container_width=True,
+    hide_index=True
+)
+
+fig_peak_mix = go.Figure()
+
+fig_peak_mix.add_trace(
+    go.Bar(
+        x=peak_mix_display["Value"],
+        y=peak_mix_display["Plant"],
+        orientation="h"
+
 
 demand_growth = st.sidebar.slider(
     "Demand Growth %",
