@@ -1240,7 +1240,7 @@ for yr in range(0, 11):
     * (1 + growth_rate / 100) ** yr
     )
 
-    reserve = (
+   reserve = (
         available_capacity
         - projected
     )
