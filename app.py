@@ -1275,15 +1275,6 @@ else:
     st.error(
         "Projected demand exceeds available capacity."
     )
-elif reserve_margin_pct >= 0:
-    st.warning(
-        "System has limited reserve margin."
-    )
-
-else:
-    st.error(
-        "Projected demand exceeds available capacity."
-    )
 
 f1, f2, f3, f4 = st.columns(4)
 
