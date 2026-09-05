@@ -946,6 +946,232 @@ st.plotly_chart(
     use_container_width=True
 )
 
+st.subheader("Reserve Margin Analysis")
+
+reserve_curve = (
+    gap_df["ReserveMargin"]
+    .sort_values(ascending=False)
+    .reset_index(drop=True)
+)
+
+reserve_pct = (
+    (reserve_curve.index + 1)
+    / len(reserve_curve)
+    * 100
+)
+
+fig_reserve = go.Figure()
+
+fig_reserve.add_trace(
+    go.Scatter(
+        x=reserve_pct,
+        y=reserve_curve,
+        mode="lines",
+        name="Reserve Margin"
+    )
+)
+
+fig_reserve.add_hline(
+    y=5,
+    line_dash="dash",
+    annotation_text="5 MW Threshold"
+)
+
+st.plotly_chart(
+    fig_reserve,
+    use_container_width=True
+)
+
+r1,r2,r3,r4,r5 = st.columns(5)
+
+r1.metric(
+    "Minimum Reserve",
+    f"{gap_df['ReserveMargin'].min():,.2f}"
+)
+
+r2.metric(
+    "Median Reserve",
+    f"{gap_df['ReserveMargin'].median():,.2f}"
+)
+
+r3.metric(
+    "P10 Reserve",
+    f"{gap_df['ReserveMargin'].quantile(.10):,.2f}"
+)
+
+r4.metric(
+    "Hours < 5 MW",
+    (gap_df["ReserveMargin"] < 5).sum()
+)
+
+r5.metric(
+    "Hours < 0 MW",
+    (gap_df["ReserveMargin"] < 0).sum()
+)
+
+st.subheader("Shortage Event Analysis")
+
+gap_df["ShortageFlag"] = gap_df["ShortageMW"] > 0
+
+gap_df["EventID"] = (
+    gap_df["ShortageFlag"]
+    != gap_df["ShortageFlag"].shift()
+).cumsum()
+
+events = []
+
+for event_id, grp in gap_df.groupby("EventID"):
+
+    if not grp["ShortageFlag"].iloc[0]:
+        continue
+
+    events.append({
+        "Start": grp["Datetime"].min(),
+        "End": grp["Datetime"].max(),
+        "Duration Hours": (
+    grp["Datetime"].max()
+    - grp["Datetime"].min()
+).total_seconds() / 3600 + 1,
+        "Max Shortage MW": round(
+            grp["ShortageMW"].max(),
+            2
+        ),
+        "Unserved Energy MWh": round(
+            grp["ShortageMW"].sum(),
+            2
+        )
+    })
+
+shortage_events = pd.DataFrame(events)
+
+st.dataframe(
+    shortage_events,
+    height=350,
+    use_container_width=True,
+    hide_index=True
+)
+
+st.subheader("Plant Contribution Analysis")
+
+plant_summary = (
+    generation.groupby("Plant")
+    .agg(
+        AvgMW=("Value", "mean"),
+        PeakMW=("Value", "max"),
+        EnergyMWh=("Value", "sum")
+    )
+    .reset_index()
+)
+
+plant_summary["Contribution %"] = (
+    plant_summary["EnergyMWh"]
+    / plant_summary["EnergyMWh"].sum()
+    * 100
+)
+
+plant_summary = plant_summary.sort_values(
+    "EnergyMWh",
+    ascending=False
+)
+
+fig_contrib = go.Figure()
+
+fig_contrib.add_trace(
+    go.Bar(
+        x=plant_summary["Plant"],
+        y=plant_summary["EnergyMWh"]
+    )
+)
+
+fig_contrib.update_layout(
+    title="Plant Energy Contribution"
+)
+
+st.plotly_chart(
+    fig_contrib,
+    use_container_width=True
+)
+
+st.dataframe(
+    plant_summary,
+    use_container_width=True,
+    hide_index=True
+)
+
+st.subheader(
+    "Generation Mix at Peak Demand"
+)
+
+peak_mix = generation[
+    generation["Datetime"] == peak_datetime
+].copy()
+
+peak_mix["Percent"] = (
+    peak_mix["Value"]
+    / peak_mix["Value"].sum()
+    * 100
+)
+
+peak_mix_display = (
+    peak_mix[
+        [
+            "Plant",
+            "Value",
+            "Percent"
+        ]
+    ]
+    .sort_values(
+        "Value",
+        ascending=False
+    )
+)
+
+st.dataframe(
+    peak_mix_display,
+    use_container_width=True,
+    hide_index=True
+)
+
+fig_peak_mix = go.Figure()
+
+fig_peak_mix.add_trace(
+    go.Bar(
+        x=peak_mix_display["Value"],
+        y=peak_mix_display["Plant"],
+        orientation="h"
+    )
+)
+
+demand_growth = st.sidebar.slider(
+    "Demand Growth %",
+    0,
+    30,
+    0
+)
+
+projected_peak = (
+    peak_demand
+    *
+    (1 + demand_growth/100)
+)
+
+st.subheader("Forecast Sandbox")
+
+f1, f2 = st.columns(2)
+
+with f1:
+    st.metric(
+        "Current Peak",
+        f"{peak_demand:,.2f} MW"
+    )
+
+with f2:
+    st.metric(
+        "Projected Peak",
+        f"{projected_peak:,.2f} MW"
+    )
+
+
 
 # -----------------------------------------------------
 # GENERATION STACK
@@ -1090,9 +1316,12 @@ st.plotly_chart(
 # DRAG PLANT ORDER (BELOW CHART)
 # =====================================================
 
-st.subheader("Drag Plant Order")
+with st.expander(
+    "Plant Stack Order",
+    expanded=False
+):
 
-plant_order = sort_items(
-    items=plant_order,
-    direction="vertical"
-)
+    plant_order = sort_items(
+        items=plant_order,
+        direction="vertical"
+    )
