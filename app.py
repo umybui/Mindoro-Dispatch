@@ -1142,6 +1142,19 @@ fig_peak_mix.add_trace(
     )
 )
 
+fig_peak_mix.update_layout(
+    title="Generation Mix at Peak Demand",
+    height=500,
+    yaxis=dict(
+        categoryorder="total ascending"
+    )
+)
+
+st.plotly_chart(
+    fig_peak_mix,
+    use_container_width=True
+)
+
 demand_growth = st.sidebar.slider(
     "Demand Growth %",
     0,
@@ -1210,18 +1223,45 @@ st.metric(
     f"{required_new_capacity:,.2f} MW"
 )
 
-if reserve_margin_pct >= 15:
-    st.success(
-        "System capacity appears adequate."
+required_new_capacity = max(
+    projected_peak - available_capacity,
+    0
+)
+
+st.subheader("Forecast Sandbox")
+
+f1, f2, f3, f4 = st.columns(4)
+
+with f1:
+    st.metric(
+        "Current Peak",
+        f"{peak_demand:,.2f} MW"
     )
-elif reserve_margin_pct >= 0:
-    st.warning(
-        "System has limited reserve margin."
+
+with f2:
+    st.metric(
+        "Projected Peak",
+        f"{projected_peak:,.2f} MW"
     )
-else:
-    st.error(
-        "Projected demand exceeds available capacity."
+
+with f3:
+    st.metric(
+        "Available Capacity",
+        f"{available_capacity:,.2f} MW"
     )
+
+with f4:
+    st.metric(
+        "Reserve Margin",
+        f"{reserve_margin_pct:.1f}%"
+    )
+
+st.metric(
+    "Required New Capacity",
+    f"{required_new_capacity:,.2f} MW"
+)
+
+if reserve_margin_pct >= 15
 
 f1, f2, f3, f4 = st.columns(4)
 
