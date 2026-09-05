@@ -1028,7 +1028,10 @@ for event_id, grp in gap_df.groupby("EventID"):
     events.append({
         "Start": grp["Datetime"].min(),
         "End": grp["Datetime"].max(),
-        "Duration Hours": len(grp),
+        "Duration Hours": (
+    grp["Datetime"].max()
+    - grp["Datetime"].min()
+).total_seconds() / 3600 + 1,
         "Max Shortage MW": round(
             grp["ShortageMW"].max(),
             2
@@ -1053,18 +1056,22 @@ st.subheader("Plant Contribution Analysis")
 plant_summary = (
     generation.groupby("Plant")
     .agg(
-        AvgMW=("Value","mean"),
-        PeakMW=("Value","max"),
-        EnergyMWh=("Value","sum")
+        AvgMW=("Value", "mean"),
+        PeakMW=("Value", "max"),
+        EnergyMWh=("Value", "sum")
     )
     .reset_index()
 )
 
 plant_summary["Contribution %"] = (
     plant_summary["EnergyMWh"]
-    /
-    plant_summary["EnergyMWh"].sum()
+    / plant_summary["EnergyMWh"].sum()
     * 100
+)
+
+plant_summary = plant_summary.sort_values(
+    "EnergyMWh",
+    ascending=False
 )
 
 fig_contrib = go.Figure()
@@ -1072,8 +1079,7 @@ fig_contrib = go.Figure()
 fig_contrib.add_trace(
     go.Bar(
         x=plant_summary["Plant"],
-        y=plant_summary["EnergyMWh"],
-        name="Energy"
+        y=plant_summary["EnergyMWh"]
     )
 )
 
@@ -1087,10 +1093,7 @@ st.plotly_chart(
 )
 
 st.dataframe(
-    plant_summary.sort_values(
-        "EnergyMWh",
-        ascending=False
-    ),
+    plant_summary,
     use_container_width=True,
     hide_index=True
 )
@@ -1100,94 +1103,11 @@ st.subheader(
 )
 
 peak_mix = generation[
-    generation["Datetime"]
-    == peak_datetime
+    generation["Datetime"] == peak_datetime
 ].copy()
 
 peak_mix["Percent"] = (
-    peak_mix["Value"]
-    /
-    peak_mix["Value"].sum()
-    * 100
-)
-
-st.dataframe(
-    peak_mix.sort_values(
-        "Value",
-        ascending=False
-    ),
-    use_container_width=True
-)
-
-go.Bar(
-    x=peak_mix["Value"],
-    y=peak_mix["Plant"],
-    orientation="h"
-)
-
-st.subheader(
-    "Plant Availability Matrix"
-)
-
-availability = (
-    generation.assign(
-        Online=
-        generation["Value"] > 0
-    )
-)
-
-heatmap_df = availability.pivot_table(
-    index="Plant",
-    columns="Datetime",
-    values="Online",
-    aggfunc="max"
-)
-
-fig_heatmap = go.Figure(
-    data=go.Heatmap(
-        z=heatmap_df.fillna(False).astype(int),
-        x=heatmap_df.columns,
-        y=heatmap_df.index
-    )
-)
-
-fig_heatmap.update_layout(
-    height=600
-)
-
-st.plotly_chart(
-    fig_heatmap,
-    use_container_width=True
-)
-
-st.subheader(
-    "Plant Utilization Analysis"
-)
-
-fig_util = go.Figure()
-
-for plant in selected_plants:
-
-    fig_util.add_trace(
-        go.Box(
-            y=
-            generation.loc[
-                generation["Plant"] == plant,
-                "Value"
-            ],
-            name=plant
-        )
-    )
-
-fig_util.update_layout(
-    title="Plant Utilization",
-    height=600
-)
-
-st.plotly_chart(
-    fig_util,
-    use_container_width=True
-)
+  
 
 demand_growth = st.sidebar.slider(
     "Demand Growth %",
