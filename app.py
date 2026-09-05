@@ -1235,18 +1235,18 @@ projection_rows = []
 
 for yr in range(0, 11):
 
-   projected = (
-    peak_demand
-    * (1 + growth_rate / 100) ** yr
+    projected = (
+        peak_demand
+        * (1 + growth_rate / 100) ** yr
     )
 
-   reserve = (
+    reserve = (
         available_capacity
         - projected
     )
 
     projection_rows.append({
-        "Year": yr,
+        "Year Ahead": yr,
         "Projected Peak MW": round(
             projected,
             2
