@@ -1139,7 +1139,7 @@ fig_peak_mix.add_trace(
         x=peak_mix_display["Value"],
         y=peak_mix_display["Plant"],
         orientation="h"
-
+    )
 
 demand_growth = st.sidebar.slider(
     "Demand Growth %",
