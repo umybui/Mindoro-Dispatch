@@ -1185,6 +1185,11 @@ reserve_margin_pct = (
     * 100
 )
 
+required_new_capacity = max(
+    projected_peak - available_capacity,
+    0
+)
+
 if reserve_margin_pct >= 15:
     st.success(
         "System capacity appears adequate."
@@ -1247,37 +1252,6 @@ else:
     st.error(
         "Projected demand exceeds available capacity."
     )
-
-f1, f2, f3, f4 = st.columns(4)
-
-with f1:
-    st.metric(
-        "Current Peak",
-        f"{peak_demand:,.2f} MW"
-    )
-
-with f2:
-    st.metric(
-        "Projected Peak",
-        f"{projected_peak:,.2f} MW"
-    )
-
-with f3:
-    st.metric(
-        "Available Capacity",
-        f"{available_capacity:,.2f} MW"
-    )
-
-with f4:
-    st.metric(
-        "Reserve Margin",
-        f"{reserve_margin_pct:.1f}%"
-    )
-
-st.metric(
-    "Required New Capacity",
-    f"{required_new_capacity:,.2f} MW"
-)
 
 # -----------------------------------------------------
 # GENERATION STACK
