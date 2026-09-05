@@ -1163,11 +1163,11 @@ growth_rate = st.sidebar.slider(
     0.1
 )
 
-years_ahead = st.sidebar.slider(
-    "Years Ahead",
-    1,
-    10,
-    1
+planning_horizon = 10
+
+projected_peak = (
+    peak_demand
+    * (1 + annual_growth / 100) ** planning_horizon
 )
 
 projected_peak = (
@@ -1236,6 +1236,32 @@ elif reserve_margin_pct >= 0:
     st.warning("System has limited reserve margin.")
 else:
     st.error("Projected demand exceeds available capacity.")
+
+projection_rows = []
+
+for yr in range(0, 11):
+
+    projected = (
+        peak_demand
+        * (1 + annual_growth / 100) ** yr
+    )
+
+    reserve = (
+        available_capacity
+        - projected
+    )
+
+    projection_rows.append({
+        "Year": yr,
+        "Projected Peak MW": round(projected, 2),
+        "Capacity Margin MW": round(reserve, 2),
+        "Additional Capacity Needed MW": round(
+            max(-reserve, 0),
+            2
+        )
+    })
+
+projection_df =
 
 # -----------------------------------------------------
 # GENERATION STACK
