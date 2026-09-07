@@ -1385,9 +1385,9 @@ for plant in plant_order:
 # IMPORT SUPPORT
 # -----------------------------------------------------
 
-if not transfer_flow.empty:
+    if not transfer_flow.empty:
 
-fig.add_trace(
+    fig.add_trace(
     go.Scatter(
         x=transfer_flow["Datetime"],
         y=transfer_flow["ImportSupport"],
