@@ -1146,26 +1146,6 @@ plant_summary = (
     .reset_index()
 )
 
-import plotly.express as px
-
-fig_tree = px.treemap(
-    plant_summary,
-    path=["Plant"],
-    values="EnergyMWh",
-    color="Contribution %",
-    color_continuous_scale="Blues"
-)
-
-fig_tree.update_layout(
-    title="Generation Share Treemap",
-    height=600
-)
-
-st.plotly_chart(
-    fig_tree,
-    use_container_width=True
-)
-
 plant_summary["Contribution %"] = (
     plant_summary["EnergyMWh"]
     / plant_summary["EnergyMWh"].sum()
@@ -1177,28 +1157,51 @@ plant_summary = plant_summary.sort_values(
     ascending=False
 )
 
-fig_contrib = go.Figure()
+major_plants = plant_summary.copy()
 
-fig_contrib.add_trace(
-    go.Bar(
-        x=plant_summary["Plant"],
-        y=plant_summary["EnergyMWh"]
-    )
+others = major_plants[
+    major_plants["Contribution %"] < 2
+]
+
+major_plants = major_plants[
+    major_plants["Contribution %"] >= 2
+]
+
+if not others.empty:
+
+    major_plants = pd.concat([
+        major_plants,
+        pd.DataFrame({
+            "Plant": ["Others"],
+            "AvgMW": [others["AvgMW"].mean()],
+            "PeakMW": [others["PeakMW"].max()],
+            "EnergyMWh": [others["EnergyMWh"].sum()],
+            "Contribution %": [others["Contribution %"].sum()]
+        })
+    ])
+
+import plotly.express as px
+
+fig_tree = px.treemap(
+    plant_summary,
+    path=["Plant"],
+    values="EnergyMWh",
+    color="Contribution %",
+    color_continuous_scale="Blues"
 )
 
-fig_contrib.update_layout(
-    title="Plant Energy Contribution"
+fig_tree.update_traces(
+    textinfo="label+percent root"
+)
+
+fig_tree.update_layout(
+    title="Generation Share Treemap",
+    height=600
 )
 
 st.plotly_chart(
-    fig_contrib,
+    fig_tree,
     use_container_width=True
-)
-
-st.dataframe(
-    plant_summary,
-    use_container_width=True,
-    hide_index=True
 )
 
 st.subheader(
