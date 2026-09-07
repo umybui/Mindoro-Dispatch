@@ -156,10 +156,17 @@ filtered = df[
 
 transfer_flow = filtered[
     filtered["Plant"]
-    == "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
+    .astype(str)
+    .str.contains(
+        "IMPORT",
+        case=False,
+        na=False
+    )
 ].copy()
 
 if not transfer_flow.empty:
+
+    # keep imports only
 
     transfer_flow["ImportSupport"] = (
         transfer_flow["Value"]
@@ -173,6 +180,15 @@ if not transfer_flow.empty:
             as_index=False
         )["ImportSupport"]
         .sum()
+    )
+
+else:
+
+    transfer_flow = pd.DataFrame(
+        {
+            "Datetime": [],
+            "ImportSupport": []
+        }
     )
 
 # =====================================================
@@ -239,18 +255,37 @@ gap_df.rename(
     inplace=True
 )
 
+gap_df = gap_df.merge(
+    transfer_flow,
+    on="Datetime",
+    how="left"
+)
+
+gap_df["ImportSupport"] = (
+    gap_df["ImportSupport"]
+    .fillna(0)
+)
+
 SHORTAGE_THRESHOLD = 0.01
 
 gap_df["ShortageMW"] = (
     gap_df["TotalDemand"]
-    - gap_df["TotalGeneration"]
+    -
+    (
+        gap_df["TotalGeneration"]
+        +
+        gap_df["ImportSupport"]
+    )
 ).round(2)
 
 gap_df["ShortageArea"] = gap_df["ShortageMW"].clip(lower=0)
 
 gap_df["ReserveMargin"] = (
     gap_df["TotalGeneration"]
-    - gap_df["TotalDemand"]
+    +
+    gap_df["ImportSupport"]
+    -
+    gap_df["TotalDemand"]
 )
 
 peak_demand = gap_df["TotalDemand"].max()
@@ -355,9 +390,9 @@ max_import_support = 0
 
 if not transfer_flow.empty:
     max_import_support = (
-        transfer_flow["ImportSupport"]
-        .max()
-    )
+    gap_df["ImportSupport"]
+    .max()
+)
 
 # =====================================================
 # KPI DISPLAY
@@ -1352,22 +1387,19 @@ for plant in plant_order:
 
 if not transfer_flow.empty:
 
-    fig.add_trace(
-        go.Scatter(
-            x=transfer_flow["Datetime"],
-            y=transfer_flow["ImportSupport"],
-            name="IMPORT SUPPORT",
-            mode="lines",
-            line=dict(
-                color="green",
-                width=4,
-                dash="dash"
-            ),
-            hovertemplate=
-                "Import Support: %{y:.2f} MW"
-                "<extra></extra>"
+fig.add_trace(
+    go.Scatter(
+        x=transfer_flow["Datetime"],
+        y=transfer_flow["ImportSupport"],
+        name="IMPORT SUPPORT",
+        mode="lines",
+        stackgroup="generation",
+        line=dict(
+            color="green",
+            width=1
         )
     )
+)
 
 # -----------------------------------------------------
 # SHORTAGE CALCULATION
@@ -1375,7 +1407,12 @@ if not transfer_flow.empty:
 
 gap_df["ShortageArea"] = (
     gap_df["TotalDemand"]
-    - gap_df["TotalGeneration"]
+    -
+    (
+        gap_df["TotalGeneration"]
+        +
+        gap_df["ImportSupport"]
+    )
 ).clip(lower=0)
 
 # -----------------------------------------------------
@@ -1414,11 +1451,17 @@ fig.add_trace(
 # TOTAL GENERATION
 # -----------------------------------------------------
 
+gap_df["TotalSupply"] = (
+    gap_df["TotalGeneration"]
+    +
+    gap_df["ImportSupport"]
+)
+
 fig.add_trace(
     go.Scatter(
         x=total_generation["Datetime"],
-        y=total_generation["TotalGeneration"],
-        name="TOTAL GENERATION",
+        y=gap_df["TotalSupply"],
+        name="TOTAL SUPPLY",
         mode="lines",
         line=dict(
             color="red",
