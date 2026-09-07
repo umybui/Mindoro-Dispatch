@@ -1146,6 +1146,26 @@ plant_summary = (
     .reset_index()
 )
 
+import plotly.express as px
+
+fig_tree = px.treemap(
+    plant_summary,
+    path=["Plant"],
+    values="EnergyMWh",
+    color="Contribution %",
+    color_continuous_scale="Blues"
+)
+
+fig_tree.update_layout(
+    title="Generation Share Treemap",
+    height=600
+)
+
+st.plotly_chart(
+    fig_tree,
+    use_container_width=True
+)
+
 plant_summary["Contribution %"] = (
     plant_summary["EnergyMWh"]
     / plant_summary["EnergyMWh"].sum()
