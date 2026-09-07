@@ -1182,28 +1182,6 @@ if not others.empty:
 
 import plotly.express as px
 
-fig_tree = px.treemap(
-    major_plants,
-    path=["Plant"],
-    values="EnergyMWh",
-    color="Contribution %",
-    color_continuous_scale="Blues"
-)
-
-fig_tree.update_traces(
-    textinfo="label+percent root"
-)
-
-fig_tree.update_layout(
-    title="Generation Share Treemap",
-    height=600
-)
-
-st.plotly_chart(
-    fig_tree,
-    use_container_width=True
-)
-
 c1, c2 = st.columns(2)
 
 with c1:
@@ -1248,6 +1226,7 @@ with c2:
         title="Plant Energy Contribution",
         xaxis_title="Plant",
         yaxis_title="Energy (MWh)",
+        xaxis_tickangle=-45,
         height=600
     )
 
