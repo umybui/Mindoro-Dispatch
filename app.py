@@ -211,11 +211,13 @@ total_demand = (
 # =====================================================
 
 generation = filtered[
-    ~filtered["Plant"].isin([
-        "TOTAL DEMAND",
-        "TOTAL GENERATION DISPATCH",
-        "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
-    ])
+    ~filtered["Plant"]
+    .astype(str)
+    .str.contains(
+        "TOTAL DEMAND|TOTAL GENERATION|SYNCHRO|IMPORT",
+        case=False,
+        na=False
+    )
 ].copy()
 
 # =====================================================
@@ -266,26 +268,24 @@ gap_df["ImportSupport"] = (
     .fillna(0)
 )
 
+gap_df["TotalSupply"] = (
+    gap_df["TotalGeneration"]
+    +
+    gap_df["ImportSupport"]
+)
+
 SHORTAGE_THRESHOLD = 0.01
 
 gap_df["ShortageMW"] = (
     gap_df["TotalDemand"]
-    -
-    (
-        gap_df["TotalGeneration"]
-        +
-        gap_df["ImportSupport"]
-    )
+    - gap_df["TotalSupply"]
 ).round(2)
 
 gap_df["ShortageArea"] = gap_df["ShortageMW"].clip(lower=0)
 
 gap_df["ReserveMargin"] = (
-    gap_df["TotalGeneration"]
-    +
-    gap_df["ImportSupport"]
-    -
-    gap_df["TotalDemand"]
+    gap_df["TotalSupply"]
+    - gap_df["TotalDemand"]
 )
 
 peak_demand = gap_df["TotalDemand"].max()
@@ -1394,7 +1394,6 @@ if not transfer_flow.empty:
             name="IMPORT SUPPORT",
             mode="lines",
             stackgroup="generation",
-            fill="tonexty",
             line=dict(
                 color="green",
                 width=1
@@ -1411,12 +1410,7 @@ if not transfer_flow.empty:
 
 gap_df["ShortageArea"] = (
     gap_df["TotalDemand"]
-    -
-    (
-        gap_df["TotalGeneration"]
-        +
-        gap_df["ImportSupport"]
-    )
+    - gap_df["TotalSupply"]
 ).clip(lower=0)
 
 # -----------------------------------------------------
@@ -1426,7 +1420,7 @@ gap_df["ShortageArea"] = (
 fig.add_trace(
     go.Scatter(
         x=gap_df["Datetime"],
-        y=gap_df["TotalGeneration"],
+        y=gap_df["TotalSupply"],
         mode="lines",
         line=dict(width=0),
         hoverinfo="skip",
@@ -1437,7 +1431,7 @@ fig.add_trace(
 fig.add_trace(
     go.Scatter(
         x=gap_df["Datetime"],
-        y=gap_df["TotalGeneration"]
+        y=gap_df["TotalSupply"]
         + gap_df["ShortageArea"],
         mode="lines",
         fill="tonexty",
@@ -1463,7 +1457,7 @@ gap_df["TotalSupply"] = (
 
 fig.add_trace(
     go.Scatter(
-        x=total_generation["Datetime"],
+        x=gap_df["Datetime"],
         y=gap_df["TotalSupply"],
         name="TOTAL SUPPLY",
         mode="lines",
