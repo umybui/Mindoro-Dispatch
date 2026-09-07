@@ -398,8 +398,53 @@ if not transfer_flow.empty:
 # KPI DISPLAY
 # =====================================================
 
-k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
+r1c1, r1c2, r1c3, r1c4 = st.columns(4)
 
+with r1c1:
+    st.metric(
+        "Peak Demand",
+        f"{peak_demand:,.2f} MW"
+    )
+
+with r1c2:
+    st.metric(
+        "Maximum Shortage",
+        f"{max_shortage:,.2f} MW"
+    )
+
+with r1c3:
+    st.metric(
+        "Unserved Energy",
+        f"{unserved_energy:,.2f} MWh"
+    )
+
+with r1c4:
+    st.metric(
+        "Hours with Shortage",
+        f"{hours_with_shortage:,}"
+    )
+
+r2c1, r2c2, r2c3 = st.columns(3)
+
+with r2c1:
+    st.metric(
+        "Low Reserve Hours (<5 MW)",
+        f"{hours_low_reserve:,}"
+    )
+
+with r2c2:
+    st.metric(
+        "Peak Demand Time",
+        peak_datetime.strftime(
+            "%Y-%m-%d %H:%M"
+        )
+    )
+
+with r2c3:
+    st.metric(
+        "Max Import Support",
+        f"{max_import_support:,.2f} MW"
+    )
 with k1:
     st.metric(
         "Peak Demand",
@@ -1380,7 +1425,7 @@ projection_df = pd.DataFrame(
 )
 
 st.caption(
-    "10-Year Capacity Planning Outlook"
+    f"10-Year Capacity Planning Outlook @ {growth_rate:.1f}% Annual Demand Growth"
 )
 
 st.dataframe(
