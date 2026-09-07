@@ -151,6 +151,47 @@ filtered = df[
 ].copy()
 
 # =====================================================
+# IMPORT SUPPORT
+# =====================================================
+
+transfer_flow = filtered[
+    filtered["Plant"]
+    .astype(str)
+    .str.contains(
+        "IMPORT",
+        case=False,
+        na=False
+    )
+].copy()
+
+if not transfer_flow.empty:
+
+    # keep imports only
+
+    transfer_flow["ImportSupport"] = (
+        transfer_flow["Value"]
+        .clip(lower=0)
+    )
+
+    transfer_flow = (
+        transfer_flow
+        .groupby(
+            "Datetime",
+            as_index=False
+        )["ImportSupport"]
+        .sum()
+    )
+
+else:
+
+    transfer_flow = pd.DataFrame(
+        {
+            "Datetime": [],
+            "ImportSupport": []
+        }
+    )
+
+# =====================================================
 # TOTAL DEMAND
 # =====================================================
 
@@ -170,11 +211,13 @@ total_demand = (
 # =====================================================
 
 generation = filtered[
-    ~filtered["Plant"].isin([
-        "TOTAL DEMAND",
-        "TOTAL GENERATION DISPATCH",
-        "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
-    ])
+    ~filtered["Plant"]
+    .astype(str)
+    .str.contains(
+        "TOTAL DEMAND|TOTAL GENERATION|SYNCHRO|IMPORT",
+        case=False,
+        na=False
+    )
 ].copy()
 
 # =====================================================
@@ -214,15 +257,34 @@ gap_df.rename(
     inplace=True
 )
 
+gap_df = gap_df.merge(
+    transfer_flow,
+    on="Datetime",
+    how="left"
+)
+
+gap_df["ImportSupport"] = (
+    gap_df["ImportSupport"]
+    .fillna(0)
+)
+
+gap_df["TotalSupply"] = (
+    gap_df["TotalGeneration"]
+    +
+    gap_df["ImportSupport"]
+)
+
+SHORTAGE_THRESHOLD = 0.01
+
 gap_df["ShortageMW"] = (
     gap_df["TotalDemand"]
-    - gap_df["TotalGeneration"]
-)
+    - gap_df["TotalSupply"]
+).round(2)
 
 gap_df["ShortageArea"] = gap_df["ShortageMW"].clip(lower=0)
 
 gap_df["ReserveMargin"] = (
-    gap_df["TotalGeneration"]
+    gap_df["TotalSupply"]
     - gap_df["TotalDemand"]
 )
 
@@ -235,7 +297,8 @@ peak_row = gap_df.loc[
 peak_datetime = peak_row["Datetime"]
 
 hours_with_shortage = (
-    gap_df["ShortageMW"] > 0
+    gap_df["ShortageMW"]
+    >= SHORTAGE_THRESHOLD
 ).sum()
 
 max_shortage = max(
@@ -245,7 +308,8 @@ max_shortage = max(
 
 unserved_energy = (
     gap_df.loc[
-        gap_df["ShortageMW"] > 0,
+        gap_df["ShortageMW"]
+        >= SHORTAGE_THRESHOLD,
         "ShortageMW"
     ].sum()
 )
@@ -255,7 +319,8 @@ hours_low_reserve = (
 ).sum()
 
 total_shortage_mwh = gap_df.loc[
-    gap_df["ShortageMW"] > 0,
+    gap_df["ShortageMW"]
+    >= SHORTAGE_THRESHOLD,
     "ShortageMW"
 ].sum()
 
@@ -321,12 +386,19 @@ generation = generation[
     generation["Plant"].isin(selected_plants)
 ]
 
+max_import_support = 0
+
+if not transfer_flow.empty:
+    max_import_support = (
+    gap_df["ImportSupport"]
+    .max()
+)
 
 # =====================================================
 # KPI DISPLAY
 # =====================================================
 
-k1, k2, k3, k4, k5, k6 = st.columns(6)
+k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
 
 with k1:
     st.metric(
@@ -366,6 +438,12 @@ with k6:
         )
     )
 
+with k7:
+    st.metric(
+        "Max Import Support",
+        f"{max_import_support:,.2f} MW"
+    )
+
 gap_df["MonthName"] = (
     gap_df["Datetime"]
     .dt.strftime("%b")
@@ -378,9 +456,11 @@ monthly_summary = (
         PeakDemand=("TotalDemand", "max"),
         MaxShortage=("ShortageMW", "max"),
         HoursWithShortage=(
-            "ShortageMW",
-            lambda x: (x > 0).sum()
-        ),
+        "ShortageMW",
+        lambda x: (
+        x >= SHORTAGE_THRESHOLD
+        ).sum()
+    ),
         LowReserveHours=(
             "ReserveMargin",
             lambda x: (x < 5).sum()
@@ -1011,7 +1091,10 @@ r5.metric(
 
 st.subheader("Shortage Event Analysis")
 
-gap_df["ShortageFlag"] = gap_df["ShortageMW"] > 0
+gap_df["ShortageFlag"] = (
+    gap_df["ShortageMW"]
+    >= SHORTAGE_THRESHOLD
+)
 
 gap_df["EventID"] = (
     gap_df["ShortageFlag"]
@@ -1074,29 +1157,83 @@ plant_summary = plant_summary.sort_values(
     ascending=False
 )
 
-fig_contrib = go.Figure()
+major_plants = plant_summary.copy()
 
-fig_contrib.add_trace(
-    go.Bar(
-        x=plant_summary["Plant"],
-        y=plant_summary["EnergyMWh"]
+others = major_plants[
+    major_plants["Contribution %"] < 2
+]
+
+major_plants = major_plants[
+    major_plants["Contribution %"] >= 2
+]
+
+if not others.empty:
+
+    major_plants = pd.concat([
+        major_plants,
+        pd.DataFrame({
+            "Plant": ["Others"],
+            "AvgMW": [others["AvgMW"].mean()],
+            "PeakMW": [others["PeakMW"].max()],
+            "EnergyMWh": [others["EnergyMWh"].sum()],
+            "Contribution %": [others["Contribution %"].sum()]
+        })
+    ])
+
+import plotly.express as px
+
+c1, c2 = st.columns(2)
+
+with c1:
+
+    fig_tree = px.treemap(
+        major_plants,
+        path=["Plant"],
+        values="EnergyMWh",
+        color="Contribution %",
+        color_continuous_scale="Blues"
     )
-)
 
-fig_contrib.update_layout(
-    title="Plant Energy Contribution"
-)
+    fig_tree.update_traces(
+        textinfo="label+percent root"
+    )
 
-st.plotly_chart(
-    fig_contrib,
-    use_container_width=True
-)
+    fig_tree.update_layout(
+        title="Generation Share Treemap",
+        height=600
+    )
 
-st.dataframe(
-    plant_summary,
-    use_container_width=True,
-    hide_index=True
-)
+    st.plotly_chart(
+        fig_tree,
+        use_container_width=True
+    )
+
+with c2:
+
+    fig_contrib = go.Figure()
+
+    fig_contrib.add_trace(
+        go.Bar(
+            x=plant_summary["Plant"],
+            y=plant_summary["EnergyMWh"],
+            text=plant_summary["Contribution %"].round(1),
+            texttemplate="%{text:.1f}%",
+            textposition="outside"
+        )
+    )
+
+    fig_contrib.update_layout(
+        title="Plant Energy Contribution",
+        xaxis_title="Plant",
+        yaxis_title="Energy (MWh)",
+        xaxis_tickangle=-45,
+        height=600
+    )
+
+    st.plotly_chart(
+        fig_contrib,
+        use_container_width=True
+    )
 
 st.subheader(
     "Generation Mix at Peak Demand"
@@ -1299,12 +1436,35 @@ for plant in plant_order:
     )
 
 # -----------------------------------------------------
+# IMPORT SUPPORT
+# -----------------------------------------------------
+
+if not transfer_flow.empty:
+
+    fig.add_trace(
+        go.Scatter(
+            x=transfer_flow["Datetime"],
+            y=transfer_flow["ImportSupport"],
+            name="IMPORT SUPPORT",
+            mode="lines",
+            stackgroup="generation",
+            line=dict(
+                color="green",
+                width=1
+            ),
+            hovertemplate=
+                "Import Support: %{y:.2f} MW"
+                "<extra></extra>"
+        )
+    )
+
+# -----------------------------------------------------
 # SHORTAGE CALCULATION
 # -----------------------------------------------------
 
 gap_df["ShortageArea"] = (
     gap_df["TotalDemand"]
-    - gap_df["TotalGeneration"]
+    - gap_df["TotalSupply"]
 ).clip(lower=0)
 
 # -----------------------------------------------------
@@ -1314,7 +1474,7 @@ gap_df["ShortageArea"] = (
 fig.add_trace(
     go.Scatter(
         x=gap_df["Datetime"],
-        y=gap_df["TotalGeneration"],
+        y=gap_df["TotalSupply"],
         mode="lines",
         line=dict(width=0),
         hoverinfo="skip",
@@ -1325,7 +1485,7 @@ fig.add_trace(
 fig.add_trace(
     go.Scatter(
         x=gap_df["Datetime"],
-        y=gap_df["TotalGeneration"]
+        y=gap_df["TotalSupply"]
         + gap_df["ShortageArea"],
         mode="lines",
         fill="tonexty",
@@ -1343,11 +1503,17 @@ fig.add_trace(
 # TOTAL GENERATION
 # -----------------------------------------------------
 
+gap_df["TotalSupply"] = (
+    gap_df["TotalGeneration"]
+    +
+    gap_df["ImportSupport"]
+)
+
 fig.add_trace(
     go.Scatter(
-        x=total_generation["Datetime"],
-        y=total_generation["TotalGeneration"],
-        name="TOTAL GENERATION",
+        x=gap_df["Datetime"],
+        y=gap_df["TotalSupply"],
+        name="TOTAL SUPPLY",
         mode="lines",
         line=dict(
             color="red",
