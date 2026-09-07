@@ -1157,15 +1157,14 @@ plant_summary = plant_summary.sort_values(
     ascending=False
 )
 
-major_plants = plant_summary.copy()
+# Show Top 15 plants individually
+# Combine the rest into Others
 
-others = major_plants[
-    major_plants["Contribution %"] < 2
-]
+top_n = 15
 
-major_plants = major_plants[
-    major_plants["Contribution %"] >= 2
-]
+major_plants = plant_summary.head(top_n).copy()
+
+others = plant_summary.iloc[top_n:].copy()
 
 if not others.empty:
 
@@ -1178,7 +1177,9 @@ if not others.empty:
             "EnergyMWh": [others["EnergyMWh"].sum()],
             "Contribution %": [others["Contribution %"].sum()]
         })
-    ])
+    ],
+    ignore_index=True
+    )
 
 import plotly.express as px
 
@@ -1214,9 +1215,9 @@ with c2:
 
     fig_contrib.add_trace(
         go.Bar(
-            x=plant_summary["Plant"],
-            y=plant_summary["EnergyMWh"],
-            text=plant_summary["Contribution %"].round(1),
+            x=major_plants["Plant"],
+            y=major_plants["EnergyMWh"],
+            text=major_plants["Contribution %"].round(1),
             texttemplate="%{text:.1f}%",
             textposition="outside"
         )
