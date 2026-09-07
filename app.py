@@ -1307,7 +1307,9 @@ required_new_capacity = max(
     0
 )
 
-st.subheader("Demand Growth & Capacity Outlook")
+st.subheader(
+    f"Demand Growth & Capacity Outlook (@ {growth_rate:.1f}% Annual Growth)"
+)
 
 f1, f2, f3, f4 = st.columns(4)
 
