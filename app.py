@@ -1183,7 +1183,7 @@ if not others.empty:
 import plotly.express as px
 
 fig_tree = px.treemap(
-    plant_summary,
+    major_plants,
     path=["Plant"],
     values="EnergyMWh",
     color="Contribution %",
@@ -1203,6 +1203,58 @@ st.plotly_chart(
     fig_tree,
     use_container_width=True
 )
+
+c1, c2 = st.columns(2)
+
+with c1:
+
+    fig_tree = px.treemap(
+        major_plants,
+        path=["Plant"],
+        values="EnergyMWh",
+        color="Contribution %",
+        color_continuous_scale="Blues"
+    )
+
+    fig_tree.update_traces(
+        textinfo="label+percent root"
+    )
+
+    fig_tree.update_layout(
+        title="Generation Share Treemap",
+        height=600
+    )
+
+    st.plotly_chart(
+        fig_tree,
+        use_container_width=True
+    )
+
+with c2:
+
+    fig_contrib = go.Figure()
+
+    fig_contrib.add_trace(
+        go.Bar(
+            x=plant_summary["Plant"],
+            y=plant_summary["EnergyMWh"],
+            text=plant_summary["Contribution %"].round(1),
+            texttemplate="%{text:.1f}%",
+            textposition="outside"
+        )
+    )
+
+    fig_contrib.update_layout(
+        title="Plant Energy Contribution",
+        xaxis_title="Plant",
+        yaxis_title="Energy (MWh)",
+        height=600
+    )
+
+    st.plotly_chart(
+        fig_contrib,
+        use_container_width=True
+    )
 
 st.subheader(
     "Generation Mix at Peak Demand"
