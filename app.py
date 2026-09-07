@@ -1385,21 +1385,25 @@ for plant in plant_order:
 # IMPORT SUPPORT
 # -----------------------------------------------------
 
-    if not transfer_flow.empty:
+if not transfer_flow.empty:
 
     fig.add_trace(
-    go.Scatter(
-        x=transfer_flow["Datetime"],
-        y=transfer_flow["ImportSupport"],
-        name="IMPORT SUPPORT",
-        mode="lines",
-        stackgroup="generation",
-        line=dict(
-            color="green",
-            width=1
+        go.Scatter(
+            x=transfer_flow["Datetime"],
+            y=transfer_flow["ImportSupport"],
+            name="IMPORT SUPPORT",
+            mode="lines",
+            stackgroup="generation",
+            fill="tonexty",
+            line=dict(
+                color="green",
+                width=1
+            ),
+            hovertemplate=
+                "Import Support: %{y:.2f} MW"
+                "<extra></extra>"
         )
     )
-)
 
 # -----------------------------------------------------
 # SHORTAGE CALCULATION
