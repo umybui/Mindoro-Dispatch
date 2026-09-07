@@ -1157,18 +1157,6 @@ plant_summary = plant_summary.sort_values(
     ascending=False
 )
 
-        major_plants,
-        pd.DataFrame({
-            "Plant": ["Others"],
-            "AvgMW": [others["AvgMW"].mean()],
-            "PeakMW": [others["PeakMW"].max()],
-            "EnergyMWh": [others["EnergyMWh"].sum()],
-            "Contribution %": [others["Contribution %"].sum()]
-        })
-    ],
-    ignore_index=True
-    )
-
 import plotly.express as px
 
 c1, c2 = st.columns(2)
