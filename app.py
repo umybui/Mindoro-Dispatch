@@ -1157,18 +1157,6 @@ plant_summary = plant_summary.sort_values(
     ascending=False
 )
 
-# Show Top 15 plants individually
-# Combine the rest into Others
-
-top_n = 15
-
-major_plants = plant_summary.head(top_n).copy()
-
-others = plant_summary.iloc[top_n:].copy()
-
-if not others.empty:
-
-    major_plants = pd.concat([
         major_plants,
         pd.DataFrame({
             "Plant": ["Others"],
@@ -1188,7 +1176,7 @@ c1, c2 = st.columns(2)
 with c1:
 
     fig_tree = px.treemap(
-        major_plants,
+        plant_summary,
         path=["Plant"],
         values="EnergyMWh",
         color="Contribution %",
@@ -1196,7 +1184,7 @@ with c1:
     )
 
     fig_tree.update_traces(
-        textinfo="label+percent root"
+        textinfo="label+value+percent root"
     )
 
     fig_tree.update_layout(
@@ -1215,9 +1203,9 @@ with c2:
 
     fig_contrib.add_trace(
         go.Bar(
-            x=major_plants["Plant"],
-            y=major_plants["EnergyMWh"],
-            text=major_plants["Contribution %"].round(1),
+            x=plant_summary["Plant"],
+            y=plant_summary["EnergyMWh"],
+            text=plant_summary["Contribution %"].round(1),
             texttemplate="%{text:.1f}%",
             textposition="outside"
         )
