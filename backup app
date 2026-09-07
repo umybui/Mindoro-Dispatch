@@ -398,39 +398,41 @@ if not transfer_flow.empty:
 # KPI DISPLAY
 # =====================================================
 
-k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
+r1c1, r1c2, r1c3, r1c4 = st.columns(4)
 
-with k1:
+with r1c1:
     st.metric(
         "Peak Demand",
         f"{peak_demand:,.2f} MW"
     )
 
-with k2:
+with r1c2:
     st.metric(
         "Maximum Shortage",
         f"{max_shortage:,.2f} MW"
     )
 
-with k3:
+with r1c3:
     st.metric(
         "Unserved Energy",
         f"{unserved_energy:,.2f} MWh"
     )
 
-with k4:
+with r1c4:
     st.metric(
         "Hours with Shortage",
         f"{hours_with_shortage:,}"
     )
 
-with k5:
+r2c1, r2c2, r2c3 = st.columns(3)
+
+with r2c1:
     st.metric(
         "Low Reserve Hours (<5 MW)",
         f"{hours_low_reserve:,}"
     )
 
-with k6:
+with r2c2:
     st.metric(
         "Peak Demand Time",
         peak_datetime.strftime(
@@ -438,7 +440,7 @@ with k6:
         )
     )
 
-with k7:
+with r2c3:
     st.metric(
         "Max Import Support",
         f"{max_import_support:,.2f} MW"
@@ -1157,29 +1159,6 @@ plant_summary = plant_summary.sort_values(
     ascending=False
 )
 
-major_plants = plant_summary.copy()
-
-others = major_plants[
-    major_plants["Contribution %"] < 2
-]
-
-major_plants = major_plants[
-    major_plants["Contribution %"] >= 2
-]
-
-if not others.empty:
-
-    major_plants = pd.concat([
-        major_plants,
-        pd.DataFrame({
-            "Plant": ["Others"],
-            "AvgMW": [others["AvgMW"].mean()],
-            "PeakMW": [others["PeakMW"].max()],
-            "EnergyMWh": [others["EnergyMWh"].sum()],
-            "Contribution %": [others["Contribution %"].sum()]
-        })
-    ])
-
 import plotly.express as px
 
 c1, c2 = st.columns(2)
@@ -1187,7 +1166,7 @@ c1, c2 = st.columns(2)
 with c1:
 
     fig_tree = px.treemap(
-        major_plants,
+        plant_summary,
         path=["Plant"],
         values="EnergyMWh",
         color="Contribution %",
@@ -1195,7 +1174,7 @@ with c1:
     )
 
     fig_tree.update_traces(
-        textinfo="label+percent root"
+        textinfo="label+value+percent root"
     )
 
     fig_tree.update_layout(
@@ -1328,7 +1307,9 @@ required_new_capacity = max(
     0
 )
 
-st.subheader("Demand Growth & Capacity Outlook")
+st.subheader(
+    f"Demand Growth & Capacity Outlook (@ {growth_rate:.1f}% Annual Growth)"
+)
 
 f1, f2, f3, f4 = st.columns(4)
 
@@ -1403,7 +1384,7 @@ projection_df = pd.DataFrame(
 )
 
 st.caption(
-    "10-Year Capacity Planning Outlook"
+    f"10-Year Capacity Planning Outlook @ {growth_rate:.1f}% Annual Demand Growth"
 )
 
 st.dataframe(
