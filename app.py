@@ -151,6 +151,31 @@ filtered = df[
 ].copy()
 
 # =====================================================
+# IMPORT SUPPORT
+# =====================================================
+
+transfer_flow = filtered[
+    filtered["Plant"]
+    == "SYNCHRO  \nEXPORT (-)  \nIMPORT (+)"
+].copy()
+
+if not transfer_flow.empty:
+
+    transfer_flow["ImportSupport"] = (
+        transfer_flow["Value"]
+        .clip(lower=0)
+    )
+
+    transfer_flow = (
+        transfer_flow
+        .groupby(
+            "Datetime",
+            as_index=False
+        )["ImportSupport"]
+        .sum()
+    )
+
+# =====================================================
 # TOTAL DEMAND
 # =====================================================
 
@@ -214,10 +239,12 @@ gap_df.rename(
     inplace=True
 )
 
+SHORTAGE_THRESHOLD = 0.01
+
 gap_df["ShortageMW"] = (
     gap_df["TotalDemand"]
     - gap_df["TotalGeneration"]
-)
+).round(2)
 
 gap_df["ShortageArea"] = gap_df["ShortageMW"].clip(lower=0)
 
@@ -235,7 +262,8 @@ peak_row = gap_df.loc[
 peak_datetime = peak_row["Datetime"]
 
 hours_with_shortage = (
-    gap_df["ShortageMW"] > 0
+    gap_df["ShortageMW"]
+    >= SHORTAGE_THRESHOLD
 ).sum()
 
 max_shortage = max(
@@ -245,7 +273,8 @@ max_shortage = max(
 
 unserved_energy = (
     gap_df.loc[
-        gap_df["ShortageMW"] > 0,
+        gap_df["ShortageMW"]
+        >= SHORTAGE_THRESHOLD,
         "ShortageMW"
     ].sum()
 )
@@ -255,7 +284,8 @@ hours_low_reserve = (
 ).sum()
 
 total_shortage_mwh = gap_df.loc[
-    gap_df["ShortageMW"] > 0,
+    gap_df["ShortageMW"]
+    >= SHORTAGE_THRESHOLD,
     "ShortageMW"
 ].sum()
 
@@ -321,12 +351,19 @@ generation = generation[
     generation["Plant"].isin(selected_plants)
 ]
 
+max_import_support = 0
+
+if not transfer_flow.empty:
+    max_import_support = (
+        transfer_flow["ImportSupport"]
+        .max()
+    )
 
 # =====================================================
 # KPI DISPLAY
 # =====================================================
 
-k1, k2, k3, k4, k5, k6 = st.columns(6)
+k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
 
 with k1:
     st.metric(
@@ -366,6 +403,12 @@ with k6:
         )
     )
 
+with k7:
+    st.metric(
+        "Max Import Support",
+        f"{max_import_support:,.2f} MW"
+    )
+
 gap_df["MonthName"] = (
     gap_df["Datetime"]
     .dt.strftime("%b")
@@ -378,9 +421,11 @@ monthly_summary = (
         PeakDemand=("TotalDemand", "max"),
         MaxShortage=("ShortageMW", "max"),
         HoursWithShortage=(
-            "ShortageMW",
-            lambda x: (x > 0).sum()
-        ),
+        "ShortageMW",
+        lambda x: (
+        x >= SHORTAGE_THRESHOLD
+        ).sum()
+    ),
         LowReserveHours=(
             "ReserveMargin",
             lambda x: (x < 5).sum()
@@ -1011,7 +1056,10 @@ r5.metric(
 
 st.subheader("Shortage Event Analysis")
 
-gap_df["ShortageFlag"] = gap_df["ShortageMW"] > 0
+gap_df["ShortageFlag"] = (
+    gap_df["ShortageMW"]
+    >= SHORTAGE_THRESHOLD
+)
 
 gap_df["EventID"] = (
     gap_df["ShortageFlag"]
@@ -1295,6 +1343,29 @@ for plant in plant_order:
             name=plant,
             mode="lines",
             stackgroup="generation"
+        )
+    )
+
+# -----------------------------------------------------
+# IMPORT SUPPORT
+# -----------------------------------------------------
+
+if not transfer_flow.empty:
+
+    fig.add_trace(
+        go.Scatter(
+            x=transfer_flow["Datetime"],
+            y=transfer_flow["ImportSupport"],
+            name="IMPORT SUPPORT",
+            mode="lines",
+            line=dict(
+                color="green",
+                width=4,
+                dash="dash"
+            ),
+            hovertemplate=
+                "Import Support: %{y:.2f} MW"
+                "<extra></extra>"
         )
     )
 
