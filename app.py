@@ -445,49 +445,6 @@ with r2c3:
         "Max Import Support",
         f"{max_import_support:,.2f} MW"
     )
-with k1:
-    st.metric(
-        "Peak Demand",
-        f"{peak_demand:,.2f} MW"
-    )
-
-with k2:
-    st.metric(
-        "Maximum Shortage",
-        f"{max_shortage:,.2f} MW"
-    )
-
-with k3:
-    st.metric(
-        "Unserved Energy",
-        f"{unserved_energy:,.2f} MWh"
-    )
-
-with k4:
-    st.metric(
-        "Hours with Shortage",
-        f"{hours_with_shortage:,}"
-    )
-
-with k5:
-    st.metric(
-        "Low Reserve Hours (<5 MW)",
-        f"{hours_low_reserve:,}"
-    )
-
-with k6:
-    st.metric(
-        "Peak Demand Time",
-        peak_datetime.strftime(
-            "%Y-%m-%d %H:%M"
-        )
-    )
-
-with k7:
-    st.metric(
-        "Max Import Support",
-        f"{max_import_support:,.2f} MW"
-    )
 
 gap_df["MonthName"] = (
     gap_df["Datetime"]
