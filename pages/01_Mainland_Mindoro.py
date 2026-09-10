@@ -1393,6 +1393,20 @@ st.dataframe(
     hide_index=True
 )
 
+# =====================================================
+# DRAG PLANT ORDER (BELOW CHART)
+# =====================================================
+
+with st.expander(
+    "Plant Stack Order",
+    expanded=False
+):
+
+    plant_order = sort_items(
+        items=plant_order,
+        direction="vertical"
+    )
+
 # -----------------------------------------------------
 # GENERATION STACK
 # -----------------------------------------------------
@@ -1566,17 +1580,3 @@ st.plotly_chart(
     fig,
     use_container_width=True
 )
-
-# =====================================================
-# DRAG PLANT ORDER (BELOW CHART)
-# =====================================================
-
-with st.expander(
-    "Plant Stack Order",
-    expanded=False
-):
-
-    plant_order = sort_items(
-        items=plant_order,
-        direction="vertical"
-    )
