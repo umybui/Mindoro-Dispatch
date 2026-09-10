@@ -202,7 +202,10 @@ generation = filtered[
 ].copy()
 
 generation = generation[
-    generation["Plant"] != "DEMAND"
+    generation["Plant"]
+    .astype(str)
+    .str.upper()
+    != "DEMAND"
 ]
 
 generation = (
@@ -217,12 +220,6 @@ generation = (
         as_index=False
     )["Value"]
     .sum()
-)
-
-st.write(
-    generation.groupby("Plant")["Value"]
-    .sum()
-    .sort_values(ascending=False)
 )
 
 st.metric(
@@ -254,6 +251,42 @@ total_generation.rename(
     },
     inplace=True
 )
+
+st.write(
+    generation.groupby("Plant")["Value"]
+    .sum()
+    .sort_values(ascending=False)
+)
+
+st.subheader("Generation Validation")
+
+st.dataframe(
+    generation.groupby("Plant")["Value"]
+    .sum()
+    .sort_values(ascending=False)
+    .reset_index(),
+    use_container_width=True
+)
+
+c1, c2 = st.columns(2)
+
+with c1:
+    st.metric(
+        "Peak Demand",
+        round(
+            total_demand["Value"].max(),
+            2
+        )
+    )
+
+with c2:
+    st.metric(
+        "Peak Generation",
+        round(
+            total_generation["TotalGeneration"].max(),
+            2
+        )
+    )
 
 # =====================================================
 # KPI DATA
