@@ -194,20 +194,6 @@ total_demand = (
 # GENERATION DATA
 # =====================================================
 
-generation = filtered[
-    filtered["Attribute"]
-    .astype(str)
-    .str.upper()
-    == "OUTPUT"
-].copy()
-
-generation = generation[
-    generation["Plant"]
-    .astype(str)
-    .str.upper()
-    != "DEMAND"
-]
-
 generation = (
     filtered[
         filtered["Attribute"]
@@ -222,15 +208,12 @@ generation = (
     .sum()
 )
 
-st.metric(
-    "Peak Demand",
-    round(total_demand["Value"].max(),2)
-)
-
-st.metric(
-    "Peak Generation",
-    round(total_generation["TotalGeneration"].max(),2)
-)
+generation = generation[
+    generation["Plant"]
+    .astype(str)
+    .str.upper()
+    != "DEMAND"
+]
 
 # =====================================================
 # TOTAL GENERATION
