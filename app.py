@@ -58,3 +58,47 @@ div[data-testid="stHorizontalBlock"] > div {
 
 </style>
 """, unsafe_allow_html=True)
+
+# Scrollable horizontal gallery
+
+gallery = st.container(horizontal=True)
+
+with gallery:
+
+    cols = st.columns(len(areas))
+
+    for col, area in zip(cols, areas):
+
+        with col:
+
+            st.image(
+                area["image"],
+                use_container_width=True
+            )
+
+            st.markdown(
+                f"""
+                <div class="island-title">
+                    {area['name']}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            if area["page"] != "#":
+
+                if st.button(
+                    "Open Dashboard",
+                    key=area["name"],
+                    use_container_width=True
+                ):
+                    st.switch_page(area["page"])
+
+            else:
+
+                st.button(
+                    "Coming Soon",
+                    key=f"soon_{area['name']}",
+                    disabled=True,
+                    use_container_width=True
+                )
