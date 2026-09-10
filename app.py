@@ -19,19 +19,19 @@ areas = [
         "image": "Mainland Palawan.png"
     },
     {
-        "name": "Marinduque",
+        "name": "Mainland Marinduque",
         "page": "#",
-        "image": "Mainland Mindoro.png"
+        "image": "Mainland Marinduque.png"
     },
     {
-        "name": "Romblon",
+        "name": "Mainland Masbate",
         "page": "#",
-        "image": "Mainland Palawan.png"
+        "image": "Mainland Masbate.png"
     },
     {
-        "name": "Busuanga",
+        "name": "Mainland Catanduanes",
         "page": "#",
-        "image": "Mainland Mindoro.png"
+        "image": "Mainland Catanduanes.png"
     }
 ]
 
@@ -39,57 +39,22 @@ st.markdown("""
 <style>
 
 [data-testid="stImage"] img{
-    height:250px !important;
+    height:320px !important;
     object-fit:contain !important;
-    border-radius:12px;
+    border-radius:16px;
 }
 
 .island-title{
     text-align:center;
-    font-weight:bold;
-    font-size:20px;
+    font-weight:700;
+    font-size:22px;
     margin-top:10px;
     margin-bottom:10px;
 }
 
+div[data-testid="stHorizontalBlock"] > div {
+    min-width: 340px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
-
-# Scrollable horizontal gallery
-gallery = st.container(horizontal=True)
-
-with gallery:
-
-    cols = st.columns(len(areas))
-
-    for col, area in zip(cols, areas):
-
-        with col:
-
-            st.image(
-                area["image"],
-                use_container_width=True
-            )
-
-            st.markdown(
-                f"<div class='island-title'>{area['name']}</div>",
-                unsafe_allow_html=True
-            )
-
-            if area["page"] != "#":
-
-                if st.button(
-                    f"Open",
-                    key=area["name"],
-                    use_container_width=True
-                ):
-                    st.switch_page(area["page"])
-
-            else:
-
-                st.button(
-                    "Coming Soon",
-                    key=f"soon_{area['name']}",
-                    disabled=True,
-                    use_container_width=True
-                )
