@@ -196,14 +196,44 @@ total_demand = (
 
 generation = filtered[
     filtered["Attribute"]
-.astype(str)
-.str.upper()
-== "OUTPUT"
+    .astype(str)
+    .str.upper()
+    == "OUTPUT"
 ].copy()
 
 generation = generation[
     generation["Plant"] != "DEMAND"
 ]
+
+generation = (
+    filtered[
+        filtered["Attribute"]
+        .astype(str)
+        .str.upper()
+        .eq("OUTPUT")
+    ]
+    .groupby(
+        ["Datetime", "Plant"],
+        as_index=False
+    )["Value"]
+    .sum()
+)
+
+st.write(
+    generation.groupby("Plant")["Value"]
+    .sum()
+    .sort_values(ascending=False)
+)
+
+st.metric(
+    "Peak Demand",
+    round(total_demand["Value"].max(),2)
+)
+
+st.metric(
+    "Peak Generation",
+    round(total_generation["TotalGeneration"].max(),2)
+)
 
 # =====================================================
 # TOTAL GENERATION
@@ -1391,17 +1421,6 @@ for plant in plant_order:
             stackgroup="generation"
         )
     )
-
-# -----------------------------------------------------
-# IMPORT SUPPORT
-# -----------------------------------------------------
-
-transfer_flow = pd.DataFrame(
-    {
-        "Datetime": [],
-        "ImportSupport": []
-    }
-)
 
 # -----------------------------------------------------
 # SHORTAGE CALCULATION
