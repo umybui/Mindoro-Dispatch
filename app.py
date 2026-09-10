@@ -7,23 +7,18 @@ st.set_page_config(
 
 st.title("Philippine Island Dispatch Dashboard")
 
-st.image(
-    "images/philippines_map.png",
-    use_container_width=True
-)
-
 st.markdown("---")
 
 areas = [
     {
-        "name":"Mainland Mindoro",
-        "page":"pages/01_Mainland_Mindoro.py",
-        "image":"images/mindoro.png"
+        "name": "Mainland Mindoro",
+        "page": "pages/01_Mainland_Mindoro.py",
+        "image": "Mainland Mindoro.png"
     },
     {
-        "name":"Mainland Palawan",
-        "page":"pages/02_Mainland_Palawan.py",
-        "image":"images/palawan.png"
+        "name": "Mainland Palawan",
+        "page": "pages/02_Mainland_Palawan.py",
+        "image": "Mainland Palawan.png"
     }
 ]
 
