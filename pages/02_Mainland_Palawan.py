@@ -1421,8 +1421,10 @@ fig.add_trace(
         y=gap_df["TotalSupply"],
         mode="lines",
         line=dict(width=0),
+        showlegend=False,
         hoverinfo="skip",
-        showlegend=False
+        hovertemplate=None,
+        name=""
     )
 )
 
@@ -1491,7 +1493,11 @@ if show_demand:
 
 for trace in fig.data:
 
-    if trace.name != "SHORTAGE":
+    if (
+        trace.name is not None
+        and trace.name != ""
+        and trace.name != "SHORTAGE"
+    ):
 
         trace.hovertemplate = (
             "%{fullData.name}: %{y:.2f} MW"
