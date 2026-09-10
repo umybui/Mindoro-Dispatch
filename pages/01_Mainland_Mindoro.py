@@ -8,11 +8,11 @@ from streamlit_sortables import sort_items
 # =====================================================
 
 st.set_page_config(
-    page_title="Mindoro Dispatch Dashboard",
+    page_title="Mainland Mindoro Dispatch Dashboard",
     layout="wide"
 )
 
-st.title("Mindoro Dispatch Dashboard")
+st.title("Mainland Mindoro Dispatch Dashboard")
 
 # =====================================================
 # LOAD DATA
