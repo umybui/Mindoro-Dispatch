@@ -22,10 +22,10 @@ st.title("Mainland Palawan Dispatch Dashboard")
 def load_data():
 
     df = pd.read_excel(
-    "PALECO Dispatch Summary.xlsx",
-    sheet_name="_2__PALECO_Reports",
-    engine="openpyxl"
-)
+        "PALECO Dispatch Summary.xlsx",
+        sheet_name="2  PALECO Reports",
+        engine="openpyxl"
+    )
 
     df["Datetime"] = pd.to_datetime(
         df["Datetime"],
@@ -33,9 +33,11 @@ def load_data():
     )
 
     df["NumericValue"] = pd.to_numeric(
-    df["NumericValue"],
-    errors="coerce"
-)
+        df["NumericValue"],
+        errors="coerce"
+    )
+
+    df["Value"] = df["NumericValue"]
 
     return df
 
