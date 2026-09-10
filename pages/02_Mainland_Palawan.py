@@ -235,26 +235,6 @@ total_generation.rename(
     inplace=True
 )
 
-validation = (
-    generation
-    .groupby("Plant")
-    .agg(
-        AvgMW=("Value","mean"),
-        PeakMW=("Value","max"),
-        Energy=("Value","sum")
-    )
-    .reset_index()
-    .sort_values(
-        "Energy",
-        ascending=False
-    )
-)
-
-st.dataframe(
-    validation,
-    use_container_width=True
-)
-
 # =====================================================
 # KPI DATA
 # =====================================================
