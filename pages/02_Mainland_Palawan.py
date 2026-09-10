@@ -235,10 +235,24 @@ total_generation.rename(
     inplace=True
 )
 
-st.write(
-    generation.groupby("Plant")["Value"]
-    .sum()
-    .sort_values(ascending=False)
+validation = (
+    generation
+    .groupby("Plant")
+    .agg(
+        AvgMW=("Value","mean"),
+        PeakMW=("Value","max"),
+        Energy=("Value","sum")
+    )
+    .reset_index()
+    .sort_values(
+        "Energy",
+        ascending=False
+    )
+)
+
+st.dataframe(
+    validation,
+    use_container_width=True
 )
 
 st.subheader("Generation Validation")
