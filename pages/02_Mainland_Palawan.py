@@ -157,11 +157,11 @@ if not transfer_flow.empty:
 else:
 
     transfer_flow = pd.DataFrame(
-        {
-            "Datetime": [],
-            "ImportSupport": []
-        }
-    )
+    {
+        "Datetime": pd.Series(dtype="datetime64[ns]"),
+        "ImportSupport": pd.Series(dtype="float")
+    }
+)
 
 # =====================================================
 # TOTAL DEMAND
@@ -169,9 +169,19 @@ else:
 
 total_demand = (
     filtered[
-        (filtered["Plant"] == "DEMAND")
-        &
-        (filtered["Attribute"] == "TOTAL GRID DEMAND")
+        (
+    filtered["Plant"]
+    .astype(str)
+    .str.upper()
+    == "DEMAND"
+)
+&
+(
+    filtered["Attribute"]
+    .astype(str)
+    .str.upper()
+    == "TOTAL GRID DEMAND"
+)
     ]
     .groupby(
         "Datetime",
@@ -185,7 +195,10 @@ total_demand = (
 # =====================================================
 
 generation = filtered[
-    filtered["Attribute"] == "OUTPUT"
+    filtered["Attribute"]
+.astype(str)
+.str.upper()
+== "OUTPUT"
 ].copy()
 
 generation = generation[
@@ -229,16 +242,7 @@ gap_df.rename(
     inplace=True
 )
 
-gap_df = gap_df.merge(
-    transfer_flow,
-    on="Datetime",
-    how="left"
-)
-
-gap_df["ImportSupport"] = (
-    gap_df["ImportSupport"]
-    .fillna(0)
-)
+gap_df["ImportSupport"] = 0
 
 gap_df["TotalSupply"] = (
     gap_df["TotalGeneration"]
