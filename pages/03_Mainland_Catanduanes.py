@@ -1949,6 +1949,26 @@ st.markdown(
     """
 )
 
+st.caption(
+    """
+    Capability Realization (%) =
+    Maximum Observed Output ÷ Dependable Capacity
+
+    Utilization Factor (%) =
+    Average Output ÷ Dependable Capacity
+
+    Sustained Capability (%) =
+    Operating Hours Above 80% of Dependable Capacity
+    ÷ Total Operating Hours
+
+    Interpretation:
+    • High Capability Realization = unit can reach its rated capability.
+    • High Utilization Factor = unit is heavily utilized.
+    • High Sustained Capability = unit can maintain strong output consistently,
+      not just during isolated peak events.
+    """
+)
+
 # -----------------------------------------------------
 # AVAILABLE CAPACITY
 # -----------------------------------------------------
@@ -2190,16 +2210,6 @@ st.plotly_chart(
 
 st.subheader(
     "Unit Capability Realization"
-)
-
-st.caption(
-    """
-Capability Realization = Max Observed MW / Dependable MW
-
-Utilization Factor = Average MW / Dependable MW
-
-Sustained Capability = Hours Above 80% Dependable MW / Operating Hours
-"""
 )
 
 st.markdown(
