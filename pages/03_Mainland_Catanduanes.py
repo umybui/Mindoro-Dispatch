@@ -1704,7 +1704,7 @@ available_capacity_tbl = (
         == "AVAILABLE CAPACITY (KW)"
     ]
     .groupby(
-        ["Plant", "Unit"]
+        ["Plant", "Unit"],
         as_index=False
     )
     .agg(
@@ -1826,8 +1826,9 @@ performance = performance.sort_values(
 
 st.markdown(
     """
-    **Story:** Evaluates whether each plant achieved its
-    available capability during critical demand periods.
+   **Story:** Evaluates whether individual generating units
+achieved their available capability during critical
+demand periods.
     """
 )
 
@@ -1835,6 +1836,7 @@ st.dataframe(
     performance[
         [
             "Plant",
+            "Unit",
             "AvailableMW",
             "AvgPeakMW",
             "MaxPeakMW",
@@ -1869,7 +1871,7 @@ for flag in performance["Risk Flag"].unique():
 
     fig_perf.add_trace(
         go.Bar(
-            y=temp["Plant"],
+            y=peak_snapshot["PlantUnit"],
             x=temp["Peak Support %"],
             orientation="h",
             name=flag,
@@ -2122,12 +2124,15 @@ for flag in asset_perf["Risk Flag"].unique():
         asset_perf["Risk Flag"] == flag
     ]
 
-    fig_asset.add_trace(
-        go.Bar(
-            temp["PlantUnit"] = (
-    temp["Plant"]
-    + " | "
-    + temp["Unit"].astype(str)
+    go.Bar(
+    y=temp["Plant"],
+    x=temp["CapabilityRealization %"],
+    orientation="h",
+    name=flag,
+    marker_color=asset_color_map.get(
+        flag,
+        "blue"
+    )
 )
 
 y=temp["PlantUnit"],
@@ -2372,7 +2377,7 @@ else:
                 "Frequently sustains at least 80% of dependable capacity."
             )
 
-if row["Risk Flag"] == "Monitor":
+        if row["Risk Flag"] == "Monitor":
             return (
                 "Moderate sustained capability. Performance should be monitored."
             )
