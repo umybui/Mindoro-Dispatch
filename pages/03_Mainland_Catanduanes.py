@@ -1931,7 +1931,7 @@ asset_perf = (
 )
 
 asset_perf = asset_perf.merge(
-    available_capacity_tbl,
+    dependable_capacity_tbl,
     on="Plant",
     how="left"
 )
@@ -2122,6 +2122,64 @@ st.plotly_chart(
     use_container_width=True
 )
 
+# =====================================================
+# UNIT CAPABILITY REALIZATION
+# =====================================================
+
+st.subheader(
+    "Unit Capability Realization"
+)
+
+if "Unit/Contract" in df.columns:
+
+    unit_generation = (
+        filtered[
+            filtered["Attribute"]
+            .astype(str)
+            .str.upper()
+            .eq("ACTUAL (KW)")
+        ]
+        .groupby(
+            ["Plant", "Unit/Contract"],
+            as_index=False
+        )
+        .agg(
+            MaxObservedMW=("Value", "max")
+        )
+    )
+
+    unit_dependable = (
+        capacity_data[
+            capacity_data["Attribute"]
+            == "DEPENDABLE CAPACITY (KW)"
+        ]
+        .groupby(
+            ["Plant", "Unit/Contract"],
+            as_index=False
+        )
+        .agg(
+            DependableMW=("Value", "max")
+        )
+    )
+
+    unit_perf = unit_generation.merge(
+        unit_dependable,
+        on=["Plant", "Unit/Contract"],
+        how="left"
+    )
+
+    unit_perf["CapabilityRealization %"] = (
+        unit_perf["MaxObservedMW"]
+        /
+        unit_perf["DependableMW"]
+        * 100
+    )
+
+unit_perf = unit_perf.sort_values(
+    ["Plant", "CapabilityRealization %"],
+    ascending=[True, True]
+)
+
 unit_perf = unit_perf.sort_values(
     ["Plant", "CapabilityRealization %"],
     ascending=[True, True]
@@ -2130,5 +2188,39 @@ unit_perf = unit_perf.sort_values(
 unit_perf["PlantUnit"] = (
     unit_perf["Plant"]
     + " | "
-    + unit_perf["Unit"]
+    + unit_perf["Unit/Contract"].astype(str)
+)
+
+fig_unit = go.Figure()
+
+fig_unit.add_trace(
+    go.Bar(
+        y=unit_perf["PlantUnit"],
+        x=unit_perf["CapabilityRealization %"],
+        orientation="h"
+    )
+)
+
+fig_unit.add_vline(
+    x=95,
+    line_dash="dash",
+    line_color="green"
+)
+
+fig_unit.add_vline(
+    x=75,
+    line_dash="dash",
+    line_color="orange"
+)
+
+fig_unit.update_layout(
+    title="Unit Capability Realization",
+    xaxis_title="Max Output / Dependable Capacity (%)",
+    yaxis_title="Plant | Unit",
+    height=max(700, len(unit_perf) * 25)
+)
+
+st.plotly_chart(
+    fig_unit,
+    use_container_width=True
 )
