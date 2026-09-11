@@ -1912,7 +1912,7 @@ dependable_capacity_tbl = (
     ]
     .groupby("Plant", as_index=False)
     .agg(
-        DependableMW=("Value", "max")
+        DependableMW=("Value", "sum")
     )
 )
 
@@ -1955,6 +1955,7 @@ asset_perf["CapabilityRealization %"] = (
     asset_perf["MaxObservedMW"]
     /
     asset_perf["DependableMW"]
+    *100
 )
 
 asset_perf.loc[
@@ -2147,6 +2148,18 @@ if "Unit/Contract" in df.columns:
         )
     )
 
+    if "Unit/Contract" in df.columns:
+
+    ...
+    
+else:
+
+    st.warning(
+        "Column 'Unit/Contract' not found."
+    )
+
+    st.stop()
+
     unit_dependable = (
         capacity_data[
             capacity_data["Attribute"]
@@ -2157,7 +2170,7 @@ if "Unit/Contract" in df.columns:
             as_index=False
         )
         .agg(
-            DependableMW=("Value", "sum")
+            DependableMW=("Value", "max")
         )
     )
 
@@ -2218,3 +2231,10 @@ st.plotly_chart(
     fig_unit,
     use_container_width=True
 )
+
+st.write(df.columns.tolist())
+
+st.write(
+    sorted(capacity_data["Attribute"].unique())
+)
+
