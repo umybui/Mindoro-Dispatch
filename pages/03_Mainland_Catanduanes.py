@@ -127,46 +127,7 @@ filtered = df[
     (df["Day"].isin(selected_days))
 ].copy()
 
-# =====================================================
-# IMPORT SUPPORT
-# =====================================================
-
-transfer_flow = filtered[
-    filtered["Plant"]
-    .astype(str)
-    .str.contains(
-        "IMPORT",
-        case=False,
-        na=False
-    )
-].copy()
-
-if not transfer_flow.empty:
-
-    # keep imports only
-
-    transfer_flow["ImportSupport"] = (
-        transfer_flow["Value"]
-        .clip(lower=0)
-    )
-
-    transfer_flow = (
-        transfer_flow
-        .groupby(
-            "Datetime",
-            as_index=False
-        )["ImportSupport"]
-        .sum()
-    )
-
-else:
-
-    transfer_flow = pd.DataFrame(
-    {
-        "Datetime": pd.Series(dtype="datetime64[ns]"),
-        "ImportSupport": pd.Series(dtype="float")
-    }
-)
+gap_df["ImportSupport"] = 0
 
 # =====================================================
 # TOTAL DEMAND
@@ -408,7 +369,7 @@ with r1c4:
         f"{hours_with_shortage:,}"
     )
 
-r2c1, r2c2, r2c3 = st.columns(3)
+r2c1, r2c2 = st.columns(2)
 
 with r2c1:
     st.metric(
@@ -422,12 +383,6 @@ with r2c2:
         peak_datetime.strftime(
             "%Y-%m-%d %H:%M"
         )
-    )
-
-with r2c3:
-    st.metric(
-        "Max Import Support",
-        f"{max_import_support:,.2f} MW"
     )
 
 gap_df["MonthName"] = (
@@ -1124,6 +1079,13 @@ st.subheader("Plant Contribution Analysis")
 
 plant_summary = (
     generation.groupby("Plant")
+    generation = generation[
+    generation["Plant"].notna()
+]
+
+generation = generation[
+    generation["Plant"].astype(str).str.strip() != ""
+]
     .agg(
         AvgMW=("Value", "mean"),
         PeakMW=("Value", "max"),
@@ -1496,7 +1458,7 @@ for trace in fig.data:
 # -----------------------------------------------------
 
 fig.update_layout(
-    title="Palawan Dispatch (OUTPUT)",
+    title="Catanduanes Dispatch",
     hovermode="x unified",
     height=900,
     xaxis_title="Datetime",
