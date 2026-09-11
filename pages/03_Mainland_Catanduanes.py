@@ -1665,7 +1665,7 @@ capacity_data = df[
     .isin(
         [
             "INSTALLED CAPACITY (KW)",
-            "DEPENDABLE CAPACITY (KW)",
+            "GUARANTEED DEPENDABLE CAPACITY (KW)",
             "AVAILABLE CAPACITY (KW)"
         ]
     )
@@ -1908,7 +1908,7 @@ st.markdown(
 dependable_capacity_tbl = (
     capacity_data[
         capacity_data["Attribute"]
-        == "DEPENDABLE CAPACITY (KW)"
+        == "GUARANTEED DEPENDABLE CAPACITY (KW)"
     ]
     .groupby("Plant", as_index=False)
     .agg(
@@ -2130,7 +2130,13 @@ st.subheader(
     "Unit Capability Realization"
 )
 
-if "Unit/Contract" in df.columns:
+if "Unit/Contract" not in df.columns:
+
+    st.warning(
+        "Column 'Unit/Contract' not found."
+    )
+
+else:
 
     unit_generation = (
         filtered[
@@ -2148,22 +2154,12 @@ if "Unit/Contract" in df.columns:
         )
     )
 
-    if "Unit/Contract" in df.columns:
-
-    ...
-    
-else:
-
-    st.warning(
-        "Column 'Unit/Contract' not found."
-    )
-
-    st.stop()
-
     unit_dependable = (
-        capacity_data[
-            capacity_data["Attribute"]
-            == "DEPENDABLE CAPACITY (KW)"
+        filtered[
+            filtered["Attribute"]
+            .astype(str)
+            .str.upper()
+            .eq("GUARANTEED DEPENDABLE CAPACITY (KW)")
         ]
         .groupby(
             ["Plant", "Unit/Contract"],
@@ -2187,50 +2183,59 @@ else:
         * 100
     )
 
-unit_perf = unit_perf.sort_values(
-    ["Plant", "CapabilityRealization %"],
-    ascending=[True, True]
-)
-
-unit_perf["PlantUnit"] = (
-    unit_perf["Plant"]
-    + " | "
-    + unit_perf["Unit/Contract"].astype(str)
-)
-
-fig_unit = go.Figure()
-
-fig_unit.add_trace(
-    go.Bar(
-        y=unit_perf["PlantUnit"],
-        x=unit_perf["CapabilityRealization %"],
-        orientation="h"
+    unit_perf = unit_perf.sort_values(
+        ["Plant", "CapabilityRealization %"],
+        ascending=[True, True]
     )
-)
 
-fig_unit.add_vline(
-    x=95,
-    line_dash="dash",
-    line_color="green"
-)
+    unit_perf["PlantUnit"] = (
+        unit_perf["Plant"]
+        + " | "
+        + unit_perf["Unit/Contract"].astype(str)
+    )
 
-fig_unit.add_vline(
-    x=75,
-    line_dash="dash",
-    line_color="orange"
-)
+    st.dataframe(
+        unit_perf,
+        use_container_width=True,
+        hide_index=True
+    )
 
-fig_unit.update_layout(
-    title="Unit Capability Realization",
-    xaxis_title="Max Output / Dependable Capacity (%)",
-    yaxis_title="Plant | Unit",
-    height=max(700, len(unit_perf) * 25)
-)
+    fig_unit = go.Figure()
 
-st.plotly_chart(
-    fig_unit,
-    use_container_width=True
-)
+    fig_unit.add_trace(
+        go.Bar(
+            y=unit_perf["PlantUnit"],
+            x=unit_perf["CapabilityRealization %"],
+            orientation="h"
+        )
+    )
+
+    fig_unit.add_vline(
+        x=95,
+        line_dash="dash",
+        line_color="green"
+    )
+
+    fig_unit.add_vline(
+        x=75,
+        line_dash="dash",
+        line_color="orange"
+    )
+
+    fig_unit.update_layout(
+        title="Unit Capability Realization",
+        xaxis_title="Max Output / Guaranteed Dependable Capacity (%)",
+        yaxis_title="Plant | Unit",
+        height=max(
+            700,
+            len(unit_perf) * 30
+        )
+    )
+
+    st.plotly_chart(
+        fig_unit,
+        use_container_width=True
+    )
 
 st.write(df.columns.tolist())
 
