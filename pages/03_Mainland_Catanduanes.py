@@ -1724,15 +1724,30 @@ capacity_data["Attribute"] = (
 available_capacity_tbl = (
     capacity_data[
         capacity_data["Attribute"]
-        == "AVAILABLE CAPACITY (KW)"
+        .isin(
+            [
+                "AVAILABLE CAPACITY (KW)",
+                "GUARANTEED DEPENDABLE CAPACITY (KW)",
+                "INSTALLED CAPACITY (KW)"
+            ]
+        )
     ]
-    .groupby(
-        ["Plant","Unit"],
-        as_index=False
+    .pivot_table(
+        index=["Plant", "Unit"],
+        columns="Attribute",
+        values="Value",
+        aggfunc="max"
     )
-    .agg(
-        AvailableMW=("Value","max")
-    )
+    .reset_index()
+)
+
+available_capacity_tbl.rename(
+    columns={
+        "AVAILABLE CAPACITY (KW)": "AvailableMW",
+        "GUARANTEED DEPENDABLE CAPACITY (KW)": "DependableMW",
+        "INSTALLED CAPACITY (KW)": "InstalledMW"
+    },
+    inplace=True
 )
 
 # -----------------------------------------------------
@@ -1748,7 +1763,7 @@ performance = peak_snapshot.merge(
 performance["Peak Support %"] = (
     performance["MaxPeakMW"]
     /
-    performance["AvailableMW"]
+    performance["DependableMW"]
     * 100
 )
 
@@ -1763,7 +1778,7 @@ performance.loc[
 
 def get_flag(row):
 
-    avail = row["AvailableMW"]
+    avail = row["DependableMW"]
     ach = row["Peak Support %"]
 
     if pd.isna(avail):
@@ -1771,6 +1786,20 @@ def get_flag(row):
 
     if avail <= 0:
         return "Outage"
+
+    plant = str(row["Plant"]).upper()
+
+if "MHP" in plant:
+
+    if ach >= 70:
+        return "OK"
+
+    if ach >= 40:
+        return "Monitor"
+
+    return "Investigate"
+
+else:
 
     if ach >= 90:
         return "OK"
@@ -1857,15 +1886,17 @@ demand periods.
 st.dataframe(
     performance[
         [
-            "Plant",
-            "Unit",
-            "AvailableMW",
-            "AvgPeakMW",
-            "MaxPeakMW",
-            "Peak Support %",
-            "Risk Flag",
-            "Remarks"
-        ]
+    "Plant",
+    "Unit",
+    "InstalledMW",
+    "DependableMW",
+    "AvailableMW",
+    "AvgPeakMW",
+    "MaxPeakMW",
+    "Peak Support %",
+    "Risk Flag",
+    "Remarks"
+]
     ],
     use_container_width=True,
     hide_index=True
@@ -1907,7 +1938,7 @@ for flag in performance["Risk Flag"].unique():
 fig_perf.update_layout(
     title=(
     "Unit Peak Support During Critical Hours"
-    "(Max Peak MW / Available MW)"
+    "(Max Peak MW / Dependable MW)"
 ),
     xaxis_title="Peak Support (%)",
     yaxis_title="Plant",
