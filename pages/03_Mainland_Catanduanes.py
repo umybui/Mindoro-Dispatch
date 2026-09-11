@@ -39,9 +39,11 @@ def load_data():
     inplace=True
 )
     
-    df["Value"] = pd.to_numeric(
-    df["Value"],
-    errors="coerce"
+df["Value"] = (
+    pd.to_numeric(
+        df["Value"],
+        errors="coerce"
+    ) / 1000
 )
 
     return df
