@@ -2184,12 +2184,19 @@ else:
         )
     )
 
-       unit_perf["CapabilityRealization %"] = (
+    unit_perf = unit_generation.merge(
+        unit_dependable,
+        on=["Plant", "Unit"],
+        how="left"
+    )
+
+    unit_perf["CapabilityRealization %"] = (
         unit_perf["MaxObservedMW"]
         /
         unit_perf["DependableMW"]
         * 100
     )
+
 
     unit_perf = unit_perf.sort_values(
         ["Plant", "CapabilityRealization %"],
