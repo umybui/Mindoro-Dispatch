@@ -30,7 +30,7 @@ areas = [
     },
     {
         "name": "Mainland Catanduanes",
-        "page": "#",
+        "page": "pages/03_Mainland_Catanduanes.py",
         "image": "Mainland Catanduanes.png"
     }
 ]
