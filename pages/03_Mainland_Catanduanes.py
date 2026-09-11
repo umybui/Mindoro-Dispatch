@@ -1581,49 +1581,6 @@ st.plotly_chart(
 )
 
 # =====================================================
-# PEAK HOUR DISPATCH HEATMAP
-# =====================================================
-
-st.subheader(
-    "Peak Hour Dispatch Heatmap"
-)
-
-heatmap_df = (
-    peak_generation
-    .pivot_table(
-        index="Plant",
-        columns="Datetime",
-        values="Value",
-        aggfunc="sum",
-        fill_value=0
-    )
-)
-
-heatmap_df = heatmap_df.loc[
-    peak_snapshot["Plant"]
-]
-
-fig_heatmap = go.Figure(
-    data=go.Heatmap(
-        z=heatmap_df.values,
-        x=heatmap_df.columns,
-        y=heatmap_df.index,
-        colorscale="Viridis",
-        colorbar_title="MW"
-    )
-)
-
-fig_heatmap.update_layout(
-    title="Plant Dispatch During Peak Hours",
-    height=700
-)
-
-st.plotly_chart(
-    fig_heatmap,
-    use_container_width=True
-)
-
-# =====================================================
 # PEAK HOUR GENERATION MIX
 # =====================================================
 
@@ -1631,23 +1588,40 @@ st.subheader(
     "Peak Hour Generation Mix"
 )
 
-mix_df = peak_generation.copy()
+daily_peak_hour = (
+    total_demand
+    .assign(Date=total_demand["Datetime"].dt.date)
+    .sort_values(
+        ["Date", "Value"],
+        ascending=[True, False]
+    )
+    .groupby("Date", as_index=False)
+    .first()
+)
 
-mix_total = (
-    mix_df.groupby("Datetime")["Value"]
+daily_peak_gen = generation.merge(
+    daily_peak_hour[["Datetime"]],
+    on="Datetime",
+    how="inner"
+)
+
+daily_peak_total = (
+    daily_peak_gen
+    .groupby("Datetime")["Value"]
     .sum()
     .rename("Total")
 )
 
-mix_df = mix_df.merge(
-    mix_total,
+daily_peak_gen = daily_peak_gen.merge(
+    daily_peak_total,
     on="Datetime",
     how="left"
 )
 
-mix_df["Share"] = (
-    mix_df["Value"]
-    / mix_df["Total"]
+daily_peak_gen["Share"] = (
+    daily_peak_gen["Value"]
+    /
+    daily_peak_gen["Total"]
     * 100
 )
 
@@ -1655,13 +1629,13 @@ fig_mix = go.Figure()
 
 for plant in peak_snapshot["Plant"]:
 
-    temp = mix_df[
-        mix_df["Plant"] == plant
+    temp = daily_peak_gen[
+        daily_peak_gen["Plant"] == plant
     ]
 
     fig_mix.add_trace(
         go.Bar(
-            x=temp["Datetime"],
+            x=temp["Datetime"].dt.date,
             y=temp["Share"],
             name=plant
         )
@@ -1669,9 +1643,9 @@ for plant in peak_snapshot["Plant"]:
 
 fig_mix.update_layout(
     barmode="stack",
-    title="Generation Mix During Peak Hours",
+    title="Generation Mix During Daily System Peaks",
+    xaxis_title="Date",
     yaxis_title="Share (%)",
-    xaxis_title="Peak Hour",
     height=650
 )
 
@@ -1732,16 +1706,9 @@ performance["Peak Support %"] = (
     * 100
 )
 
-performance["Peak Support % %"] = (
-    performance["MaxPeakMW"]
-    /
-    performance["AvailableMW"]
-    * 100
-)
-
 performance.loc[
     performance["AvailableMW"] <= 0,
-    "Achievement %"
+    "Peak Support %"
 ] = None
 
 # -----------------------------------------------------
@@ -1751,7 +1718,7 @@ performance.loc[
 def get_flag(row):
 
     avail = row["AvailableMW"]
-    ach = row["Achievement %"]
+    ach = row["Peak Support %"]
 
     if pd.isna(avail):
         return "No Data"
@@ -1829,7 +1796,7 @@ performance["Remarks"] = (
 )
 
 performance = performance.sort_values(
-    "Achievement %",
+    "Peak Support %",
     ascending=True
 )
 
@@ -1847,7 +1814,7 @@ st.dataframe(
             "AvailableMW",
             "AvgPeakMW",
             "MaxPeakMW",
-            "Achievement %",
+            "Peak Support %",
             "Risk Flag",
             "Remarks"
         ]
@@ -1879,7 +1846,7 @@ for flag in performance["Risk Flag"].unique():
     fig_perf.add_trace(
         go.Bar(
             y=temp["Plant"],
-            x=temp["Achievement %"],
+            x=temp["Peak Support %"],
             orientation="h",
             name=flag,
             marker_color=color_map.get(
@@ -1891,10 +1858,10 @@ for flag in performance["Risk Flag"].unique():
 
 fig_perf.update_layout(
     title=(
-        "Peak Capability Achievement "
-        "(Peak Max MW / Available MW)"
-    ),
-    xaxis_title="Achievement (%)",
+    "Peak Support During Critical Hours "
+    "(Max Peak MW / Available MW)"
+),
+    xaxis_title="Peak Support (%)",
     yaxis_title="Plant",
     height=600,
     barmode="group"
@@ -1938,14 +1905,14 @@ st.markdown(
 # AVAILABLE CAPACITY
 # -----------------------------------------------------
 
-available_capacity_tbl = (
+dependable_capacity_tbl = (
     capacity_data[
         capacity_data["Attribute"]
-        == "AVAILABLE CAPACITY (KW)"
+        == "DEPENDABLE CAPACITY (KW)"
     ]
     .groupby("Plant", as_index=False)
     .agg(
-        AvailableMW=("Value", "max")
+        DependableMW=("Value", "max")
     )
 )
 
