@@ -32,12 +32,10 @@ def load_data():
         errors="coerce"
     )
 
-    df["Valaue"] = pd.to_numeric(
-        df["Value"],
-        errors="coerce"
-    )
-
-    df["Value"] = df["NumericValue"]
+    df["Value"] = pd.to_numeric(
+    df["Value"],
+    errors="coerce"
+)
 
     return df
 
