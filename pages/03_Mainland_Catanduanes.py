@@ -1704,13 +1704,12 @@ available_capacity_tbl = (
         == "AVAILABLE CAPACITY (KW)"
     ]
     .groupby(
-        ["Plant", "Unit"],
+        ["Plant","Unit"],
         as_index=False
     )
     .agg(
-        AvailableMW=("Value", "max")
+        AvailableMW=("Value","max")
     )
-    .reset_index()
 )
 
 # -----------------------------------------------------
@@ -1870,17 +1869,17 @@ for flag in performance["Risk Flag"].unique():
     ]
 
     fig_perf.add_trace(
-        go.Bar(
-            y=peak_snapshot["PlantUnit"],
-            x=temp["Peak Support %"],
-            orientation="h",
-            name=flag,
-            marker_color=color_map.get(
-                flag,
-                "blue"
-            )
+    go.Bar(
+        y=temp["PlantUnit"],
+        x=temp["Peak Support %"],
+        orientation="h",
+        name=flag,
+        marker_color=color_map.get(
+            flag,
+            "blue"
         )
     )
+)
 
 fig_perf.update_layout(
     title=(
@@ -2124,18 +2123,9 @@ for flag in asset_perf["Risk Flag"].unique():
         asset_perf["Risk Flag"] == flag
     ]
 
-    go.Bar(
-    y=temp["Plant"],
-    x=temp["CapabilityRealization %"],
-    orientation="h",
-    name=flag,
-    marker_color=asset_color_map.get(
-        flag,
-        "blue"
-    )
-)
-
-y=temp["PlantUnit"],
+    fig_asset.add_trace(
+        go.Bar(
+            y=temp["Plant"],
             x=temp["CapabilityRealization %"],
             orientation="h",
             name=flag,
@@ -2473,16 +2463,16 @@ else:
         )
 
     fig_unit.add_vline(
-    x=80,
-    line_dash="dash",
-    line_color="green"
-)
+        x=80,
+        line_dash="dash",
+        line_color="green"
+    )
 
-fig_unit.add_vline(
-    x=40,
-    line_dash="dash",
-    line_color="orange"
-)
+    fig_unit.add_vline(
+        x=40,
+        line_dash="dash",
+        line_color="orange"
+    )
 
     fig_unit.update_layout(
         title=
