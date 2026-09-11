@@ -2267,9 +2267,3 @@ else:
         use_container_width=True
     )
 
-st.write(df.columns.tolist())
-
-st.write(
-    sorted(capacity_data["Attribute"].unique())
-)
-
