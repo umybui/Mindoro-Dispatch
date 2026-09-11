@@ -1067,7 +1067,6 @@ st.dataframe(
 
 st.subheader("Plant Contribution Analysis")
 
-# Remove blank plants first
 generation = generation[
     generation["Plant"].notna()
 ]
@@ -1076,16 +1075,9 @@ generation = generation[
     generation["Plant"].astype(str).str.strip() != ""
 ]
 
-# Plant summary
 plant_summary = (
     generation.groupby("Plant")
     .agg(
-        AvgMW=("Value", "mean"),
-        PeakMW=("Value", "max"),
-        EnergyMWh=("Value", "sum")
-    )
-    .reset_index()
-)
         AvgMW=("Value", "mean"),
         PeakMW=("Value", "max"),
         EnergyMWh=("Value", "sum")
