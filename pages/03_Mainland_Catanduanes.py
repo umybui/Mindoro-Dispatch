@@ -1662,9 +1662,16 @@ daily_peak_gen["Share"] = (
 
 fig_mix = go.Figure()
 
-for plant in sorted(
-    daily_peak_gen["Plant"].unique()
-):
+plant_order = (
+    daily_peak_gen
+    .groupby("Plant")["Value"]
+    .sum()
+    .sort_values(ascending=False)
+    .index
+    .tolist()
+)
+
+for plant in plant_order:
 
     temp = daily_peak_gen[
         daily_peak_gen["Plant"] == plant
