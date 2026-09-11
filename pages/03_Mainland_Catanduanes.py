@@ -2144,6 +2144,16 @@ st.subheader(
     "Unit Capability Realization"
 )
 
+st.markdown(
+    """
+    **Story:** Evaluates whether individual units can
+    consistently sustain at least 80% of their
+    guaranteed dependable capacity throughout the
+    study period, rather than merely reaching full
+    output on isolated occasions.
+    """
+)
+
 if "Unit" not in df.columns:
 
     st.warning(
@@ -2152,7 +2162,11 @@ if "Unit" not in df.columns:
 
 else:
 
-    unit_generation = (
+    # -------------------------------------------------
+    # HOURLY UNIT GENERATION
+    # -------------------------------------------------
+
+    unit_hourly = (
         filtered[
             filtered["Attribute"]
             .astype(str)
@@ -2160,35 +2174,104 @@ else:
             .eq("ACTUAL (KW)")
         ]
         .groupby(
-            ["Plant", "Unit"],
+            ["Datetime","Plant","Unit"],
             as_index=False
         )
         .agg(
-            MaxObservedMW=("Value", "max")
+            MW=("Value","sum")
         )
     )
+
+    # -------------------------------------------------
+    # DEPENDABLE CAPACITY
+    # -------------------------------------------------
 
     unit_dependable = (
         filtered[
             filtered["Attribute"]
             .astype(str)
             .str.upper()
-            .eq("GUARANTEED DEPENDABLE CAPACITY (KW)")
+            .eq(
+                "GUARANTEED DEPENDABLE CAPACITY (KW)"
+            )
         ]
         .groupby(
-            ["Plant", "Unit"],
+            ["Plant","Unit"],
             as_index=False
         )
         .agg(
-            DependableMW=("Value", "max")
+            DependableMW=("Value","max")
         )
     )
 
-    unit_perf = unit_generation.merge(
+    # -------------------------------------------------
+    # UNIT STATISTICS
+    # -------------------------------------------------
+
+    unit_perf = (
+        unit_hourly
+        .groupby(
+            ["Plant","Unit"],
+            as_index=False
+        )
+        .agg(
+            AvgMW=("MW","mean"),
+            MaxObservedMW=("MW","max"),
+            EnergyMWh=("MW","sum"),
+            OperatingHours=(
+                "MW",
+                lambda x: (x > 0).sum()
+            )
+        )
+    )
+
+    unit_perf = unit_perf.merge(
         unit_dependable,
-        on=["Plant", "Unit"],
+        on=["Plant","Unit"],
         how="left"
     )
+
+    # -------------------------------------------------
+    # HOURS ABOVE 90% DEPENDABLE
+    # -------------------------------------------------
+
+    hourly_cap = (
+        unit_hourly.merge(
+            unit_dependable,
+            on=["Plant","Unit"],
+            how="left"
+        )
+    )
+
+    hourly_cap["Above80Pct"] = (
+        hourly_cap["MW"]
+        >=
+        hourly_cap["DependableMW"] * 0.80
+    )
+
+    sustained_tbl = (
+        hourly_cap
+        .groupby(
+            ["Plant","Unit"],
+            as_index=False
+        )
+        .agg(
+            HoursAbove80Pct=(
+                "Above80Pct",
+                "sum"
+            )
+        )
+    )
+
+    unit_perf = unit_perf.merge(
+        sustained_tbl,
+        on=["Plant","Unit"],
+        how="left"
+    )
+
+    # -------------------------------------------------
+    # KPIs
+    # -------------------------------------------------
 
     unit_perf["CapabilityRealization %"] = (
         unit_perf["MaxObservedMW"]
@@ -2197,10 +2280,82 @@ else:
         * 100
     )
 
+    unit_perf["UtilizationFactor %"] = (
+        unit_perf["AvgMW"]
+        /
+        unit_perf["DependableMW"]
+        * 100
+    )
 
-    unit_perf = unit_perf.sort_values(
-        ["Plant", "CapabilityRealization %"],
-        ascending=[True, True]
+    unit_perf["SustainedCapability %"] = (
+        unit_perf["HoursAbove80Pct"]
+        /
+        unit_perf["OperatingHours"]
+        * 100
+    )
+
+    # -------------------------------------------------
+    # RISK FLAG
+    # -------------------------------------------------
+
+    def get_unit_flag(row):
+
+        if pd.isna(row["DependableMW"]):
+            return "No Data"
+
+        if row["DependableMW"] <= 0:
+            return "Outage"
+
+        if row["SustainedCapability %"] >= 50:
+            return "OK"
+
+        if row["SustainedCapability %"] >= 20:
+            return "Monitor"
+
+        return "Investigate"
+
+    unit_perf["Risk Flag"] = (
+        unit_perf.apply(
+            get_unit_flag,
+            axis=1
+        )
+    )
+
+    # -------------------------------------------------
+    # REMARKS
+    # -------------------------------------------------
+
+    def unit_remark(row):
+
+        if row["Risk Flag"] == "OK":
+            return (
+                "Frequently operates near dependable capacity."
+            )
+
+        if row["Risk Flag"] == "Monitor":
+            return (
+                "Occasionally achieves dependable capability."
+            )
+
+        if row["Risk Flag"] == "Investigate":
+            return (
+                "Rarely sustains dependable capability. "
+                "Review outages, derating, maintenance, "
+                "fuel supply, or dispatch strategy."
+            )
+
+        if row["Risk Flag"] == "Outage":
+            return (
+                "No dependable capacity available."
+            )
+
+        return "Missing data."
+
+    unit_perf["Remarks"] = (
+        unit_perf.apply(
+            unit_remark,
+            axis=1
+        )
     )
 
     unit_perf["PlantUnit"] = (
@@ -2209,42 +2364,92 @@ else:
         + unit_perf["Unit"].astype(str)
     )
 
+    unit_perf = unit_perf.sort_values(
+        ["Plant","SustainedCapability %"],
+        ascending=[True,True]
+    )
+
+    # -------------------------------------------------
+    # TABLE
+    # -------------------------------------------------
+
     st.dataframe(
-        unit_perf,
+        unit_perf[
+            [
+                "Plant",
+                "Unit",
+                "DependableMW",
+                "AvgMW",
+                "MaxObservedMW",
+                "OperatingHours",
+                "HoursAbove80Pct",
+                "UtilizationFactor %",
+                "CapabilityRealization %",
+                "SustainedCapability %",
+                "Risk Flag",
+                "Remarks"
+            ]
+        ],
         use_container_width=True,
         hide_index=True
     )
 
+    # -------------------------------------------------
+    # CHART
+    # -------------------------------------------------
+
+    color_map = {
+        "OK": "green",
+        "Monitor": "gold",
+        "Investigate": "red",
+        "Outage": "gray",
+        "No Data": "lightgray"
+    }
+
     fig_unit = go.Figure()
 
-    fig_unit.add_trace(
-        go.Bar(
-            y=unit_perf["PlantUnit"],
-            x=unit_perf["CapabilityRealization %"],
-            orientation="h"
+    for flag in unit_perf["Risk Flag"].unique():
+
+        temp = unit_perf[
+            unit_perf["Risk Flag"] == flag
+        ]
+
+        fig_unit.add_trace(
+            go.Bar(
+                y=temp["PlantUnit"],
+                x=temp["SustainedCapability %"],
+                orientation="h",
+                name=flag,
+                marker_color=color_map.get(
+                    flag,
+                    "blue"
+                )
+            )
         )
-    )
 
     fig_unit.add_vline(
-        x=95,
+        x=30,
         line_dash="dash",
         line_color="green"
     )
 
     fig_unit.add_vline(
-        x=75,
+        x=10,
         line_dash="dash",
         line_color="orange"
     )
 
     fig_unit.update_layout(
-        title="Unit Capability Realization",
-        xaxis_title="Max Output / Guaranteed Dependable Capacity (%)",
+        title=
+            "Unit Sustained Capability Assessment",
+        xaxis_title=
+            "% of Operating Hours Above 80% of Dependable Capacity",
         yaxis_title="Plant | Unit",
         height=max(
             700,
             len(unit_perf) * 30
-        )
+        ),
+        barmode="group"
     )
 
     st.plotly_chart(
