@@ -1517,14 +1517,35 @@ peak_generation = generation[
 # -----------------------------------------------------
 
 peak_snapshot = (
-    peak_generation
-    .groupby("Plant")
-    .agg(
-        AvgPeakMW=("Value", "mean"),
-        MaxPeakMW=("Value", "max"),
-        PeakEnergyMWh=("Value", "sum")
+    filtered[
+        filtered["Attribute"]
+        .astype(str)
+        .str.upper()
+        .eq("ACTUAL (KW)")
+    ]
+)
+
+peak_snapshot = peak_snapshot[
+    peak_snapshot["Datetime"].isin(peak_hours)
+]
+
+peak_snapshot = (
+    peak_snapshot
+    .groupby(
+        ["Plant","Unit"],
+        as_index=False
     )
-    .reset_index()
+    .agg(
+        AvgPeakMW=("Value","mean"),
+        MaxPeakMW=("Value","max"),
+        PeakEnergyMWh=("Value","sum")
+    )
+)
+
+peak_snapshot["PlantUnit"] = (
+    peak_snapshot["Plant"]
+    + " | "
+    + peak_snapshot["Unit"].astype(str)
 )
 
 peak_snapshot["PeakEnergyShare %"] = (
@@ -1682,9 +1703,12 @@ available_capacity_tbl = (
         capacity_data["Attribute"]
         == "AVAILABLE CAPACITY (KW)"
     ]
-    .groupby("Plant")
+    .groupby(
+        ["Plant", "Unit"]
+        as_index=False
+    )
     .agg(
-        AvailableMW=("Value", "sum")
+        AvailableMW=("Value", "max")
     )
     .reset_index()
 )
@@ -1695,7 +1719,7 @@ available_capacity_tbl = (
 
 performance = peak_snapshot.merge(
     available_capacity_tbl,
-    on="Plant",
+    on=["Plant","Unit"],
     how="left"
 )
 
@@ -1858,7 +1882,7 @@ for flag in performance["Risk Flag"].unique():
 
 fig_perf.update_layout(
     title=(
-    "Peak Support During Critical Hours "
+    "Unit Peak Support During Critical Hours"
     "(Max Peak MW / Available MW)"
 ),
     xaxis_title="Peak Support (%)",
@@ -2100,7 +2124,13 @@ for flag in asset_perf["Risk Flag"].unique():
 
     fig_asset.add_trace(
         go.Bar(
-            y=temp["Plant"],
+            temp["PlantUnit"] = (
+    temp["Plant"]
+    + " | "
+    + temp["Unit"].astype(str)
+)
+
+y=temp["PlantUnit"],
             x=temp["CapabilityRealization %"],
             orientation="h",
             name=flag,
@@ -2316,10 +2346,10 @@ else:
         if row["DependableMW"] <= 0:
             return "Outage"
 
-        if row["SustainedCapability %"] >= 50:
+        if row["SustainedCapability %"] >= 80:
             return "OK"
 
-        if row["SustainedCapability %"] >= 20:
+        if row["SustainedCapability %"] >= 40:
             return "Monitor"
 
         return "Investigate"
@@ -2339,12 +2369,12 @@ else:
 
         if row["Risk Flag"] == "OK":
             return (
-                "Frequently operates near dependable capacity."
+                "Frequently sustains at least 80% of dependable capacity."
             )
 
-        if row["Risk Flag"] == "Monitor":
+if row["Risk Flag"] == "Monitor":
             return (
-                "Occasionally achieves dependable capability."
+                "Moderate sustained capability. Performance should be monitored."
             )
 
         if row["Risk Flag"] == "Investigate":
@@ -2438,16 +2468,16 @@ else:
         )
 
     fig_unit.add_vline(
-        x=30,
-        line_dash="dash",
-        line_color="green"
-    )
+    x=80,
+    line_dash="dash",
+    line_color="green"
+)
 
-    fig_unit.add_vline(
-        x=10,
-        line_dash="dash",
-        line_color="orange"
-    )
+fig_unit.add_vline(
+    x=40,
+    line_dash="dash",
+    line_color="orange"
+)
 
     fig_unit.update_layout(
         title=
