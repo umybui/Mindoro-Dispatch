@@ -1102,16 +1102,23 @@ c1, c2 = st.columns(2)
 
 with c1:
 
-    st.write("Plant Summary")
-    st.dataframe(plant_summary)
+    fig_tree = px.treemap(
+        plant_summary,
+        path=["Plant"],
+        values="EnergyMWh",
+        color="Contribution %",
+        color_continuous_scale="Blues"
+    )
 
-    st.write("Null Plant Count")
-    st.write(plant_summary["Plant"].isna().sum())
+    fig_tree.update_layout(
+        title="Generation Share Treemap",
+        height=600
+    )
 
-    st.write("Plant Values")
-    st.write(plant_summary["Plant"].unique())
-
-    st.stop()
+    st.plotly_chart(
+        fig_tree,
+        use_container_width=True
+    )
 
 with c2:
 
