@@ -2144,6 +2144,16 @@ st.subheader(
     "Unit Capability Realization"
 )
 
+st.caption(
+    """
+Capability Realization = Max Observed MW / Dependable MW
+
+Utilization Factor = Average MW / Dependable MW
+
+Sustained Capability = Hours Above 80% Dependable MW / Operating Hours
+"""
+)
+
 st.markdown(
     """
     **Story:** Evaluates whether individual units can
