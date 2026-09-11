@@ -1789,25 +1789,25 @@ def get_flag(row):
 
     plant = str(row["Plant"]).upper()
 
-if "MHP" in plant:
+    if "MHP" in plant:
 
-    if ach >= 70:
-        return "OK"
+        if ach >= 70:
+            return "OK"
 
-    if ach >= 40:
-        return "Monitor"
+        if ach >= 40:
+            return "Monitor"
 
-    return "Investigate"
+        return "Investigate"
 
-else:
+    else:
 
-    if ach >= 90:
-        return "OK"
+        if ach >= 90:
+            return "OK"
 
-    if ach >= 70:
-        return "Monitor"
+        if ach >= 70:
+            return "Monitor"
 
-    return "Investigate"
+        return "Investigate"
 
 performance["Risk Flag"] = (
     performance.apply(
