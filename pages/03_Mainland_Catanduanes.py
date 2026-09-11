@@ -1943,7 +1943,7 @@ asset_perf = asset_perf.merge(
 asset_perf["UtilizationFactor %"] = (
     asset_perf["AvgMW"]
     /
-    asset_perf["AvailableMW"]
+    asset_perf["DependableMW"]
     * 100
 )
 
@@ -1954,12 +1954,11 @@ asset_perf["UtilizationFactor %"] = (
 asset_perf["CapabilityRealization %"] = (
     asset_perf["MaxObservedMW"]
     /
-    asset_perf["AvailableMW"]
-    * 100
+    asset_perf["DependableMW"]
 )
 
 asset_perf.loc[
-    asset_perf["AvailableMW"] <= 0,
+    asset_perf["DependableMW"] <= 0,
     "CapabilityRealization %"
 ] = None
 
@@ -1969,7 +1968,7 @@ asset_perf.loc[
 
 def asset_flag(row):
 
-    avail = row["AvailableMW"]
+    avail = row["DependableMW"]
     realization = row["CapabilityRealization %"]
 
     if pd.isna(avail):
@@ -2051,7 +2050,7 @@ st.dataframe(
     asset_perf[
         [
             "Plant",
-            "AvailableMW",
+            "DependableMW",
             "AvgMW",
             "MaxObservedMW",
             "UtilizationFactor %",
@@ -2111,7 +2110,7 @@ fig_asset.add_vline(
 
 fig_asset.update_layout(
     title="Capability Realization by Plant",
-    xaxis_title="Max Observed MW / Available MW (%)",
+    xaxis_title="Max Observed MW / Dependable MW (%)",
     yaxis_title="Plant",
     height=650,
     barmode="group"
@@ -2158,7 +2157,7 @@ if "Unit/Contract" in df.columns:
             as_index=False
         )
         .agg(
-            DependableMW=("Value", "max")
+            DependableMW=("Value", "sum")
         )
     )
 
@@ -2174,11 +2173,6 @@ if "Unit/Contract" in df.columns:
         unit_perf["DependableMW"]
         * 100
     )
-
-unit_perf = unit_perf.sort_values(
-    ["Plant", "CapabilityRealization %"],
-    ascending=[True, True]
-)
 
 unit_perf = unit_perf.sort_values(
     ["Plant", "CapabilityRealization %"],
