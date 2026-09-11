@@ -1535,7 +1535,7 @@ peak_snapshot["PeakEnergyShare %"] = (
 )
 
 peak_snapshot = peak_snapshot.sort_values(
-    "PeakEnergyMWh",
+    "PeakEnergyShare %",
     ascending=False
 )
 
@@ -1557,7 +1557,7 @@ fig_peak_support = go.Figure()
 fig_peak_support.add_trace(
     go.Bar(
         y=peak_snapshot["Plant"],
-        x=peak_snapshot["AvgPeakMW"],
+        x=peak_snapshot["PeakEnergyShare %"],
         orientation="h",
         text=peak_snapshot["PeakEnergyShare %"].round(1),
         texttemplate="%{text:.1f}%",
@@ -1566,14 +1566,117 @@ fig_peak_support.add_trace(
 )
 
 fig_peak_support.update_layout(
-    title="Average Dispatch During Peak Hours",
-    xaxis_title="Average MW",
+    title="Peak Hour Energy Contribution Share",
+    xaxis_title="Peak Energy Share (%)",
     yaxis_title="Plant",
-    height=500
+    height=550,
+    yaxis=dict(
+        categoryorder="total ascending"
+    )
 )
 
 st.plotly_chart(
     fig_peak_support,
+    use_container_width=True
+)
+
+# =====================================================
+# PEAK HOUR DISPATCH HEATMAP
+# =====================================================
+
+st.subheader(
+    "Peak Hour Dispatch Heatmap"
+)
+
+heatmap_df = (
+    peak_generation
+    .pivot_table(
+        index="Plant",
+        columns="Datetime",
+        values="Value",
+        aggfunc="sum",
+        fill_value=0
+    )
+)
+
+heatmap_df = heatmap_df.loc[
+    peak_snapshot["Plant"]
+]
+
+fig_heatmap = go.Figure(
+    data=go.Heatmap(
+        z=heatmap_df.values,
+        x=heatmap_df.columns,
+        y=heatmap_df.index,
+        colorscale="Viridis",
+        colorbar_title="MW"
+    )
+)
+
+fig_heatmap.update_layout(
+    title="Plant Dispatch During Peak Hours",
+    height=700
+)
+
+st.plotly_chart(
+    fig_heatmap,
+    use_container_width=True
+)
+
+# =====================================================
+# PEAK HOUR GENERATION MIX
+# =====================================================
+
+st.subheader(
+    "Peak Hour Generation Mix"
+)
+
+mix_df = peak_generation.copy()
+
+mix_total = (
+    mix_df.groupby("Datetime")["Value"]
+    .sum()
+    .rename("Total")
+)
+
+mix_df = mix_df.merge(
+    mix_total,
+    on="Datetime",
+    how="left"
+)
+
+mix_df["Share"] = (
+    mix_df["Value"]
+    / mix_df["Total"]
+    * 100
+)
+
+fig_mix = go.Figure()
+
+for plant in peak_snapshot["Plant"]:
+
+    temp = mix_df[
+        mix_df["Plant"] == plant
+    ]
+
+    fig_mix.add_trace(
+        go.Bar(
+            x=temp["Datetime"],
+            y=temp["Share"],
+            name=plant
+        )
+    )
+
+fig_mix.update_layout(
+    barmode="stack",
+    title="Generation Mix During Peak Hours",
+    yaxis_title="Share (%)",
+    xaxis_title="Peak Hour",
+    height=650
+)
+
+st.plotly_chart(
+    fig_mix,
     use_container_width=True
 )
 
@@ -1607,7 +1710,7 @@ available_capacity_tbl = (
     ]
     .groupby("Plant")
     .agg(
-        AvailableMW=("Value", "max")
+        AvailableMW=("Value", "sum")
     )
     .reset_index()
 )
@@ -1622,7 +1725,14 @@ performance = peak_snapshot.merge(
     how="left"
 )
 
-performance["Achievement %"] = (
+performance["Peak Support %"] = (
+    performance["MaxPeakMW"]
+    /
+    performance["AvailableMW"]
+    * 100
+)
+
+performance["Peak Support % %"] = (
     performance["MaxPeakMW"]
     /
     performance["AvailableMW"]
