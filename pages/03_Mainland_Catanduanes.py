@@ -127,8 +127,6 @@ filtered = df[
     (df["Day"].isin(selected_days))
 ].copy()
 
-gap_df["ImportSupport"] = 0
-
 # =====================================================
 # TOTAL DEMAND
 # =====================================================
@@ -330,14 +328,6 @@ selected_plants = st.sidebar.multiselect(
 generation = generation[
     generation["Plant"].isin(selected_plants)
 ]
-
-max_import_support = 0
-
-if not transfer_flow.empty:
-    max_import_support = (
-    gap_df["ImportSupport"]
-    .max()
-)
 
 # =====================================================
 # KPI DISPLAY
@@ -1077,16 +1067,25 @@ st.dataframe(
 
 st.subheader("Plant Contribution Analysis")
 
-plant_summary = (
-    generation.groupby("Plant")
-    generation = generation[
+# Remove blank plants first
+generation = generation[
     generation["Plant"].notna()
 ]
 
 generation = generation[
     generation["Plant"].astype(str).str.strip() != ""
 ]
+
+# Plant summary
+plant_summary = (
+    generation.groupby("Plant")
     .agg(
+        AvgMW=("Value", "mean"),
+        PeakMW=("Value", "max"),
+        EnergyMWh=("Value", "sum")
+    )
+    .reset_index()
+)
         AvgMW=("Value", "mean"),
         PeakMW=("Value", "max"),
         EnergyMWh=("Value", "sum")
