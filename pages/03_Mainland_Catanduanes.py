@@ -2121,3 +2121,14 @@ st.plotly_chart(
     fig_asset,
     use_container_width=True
 )
+
+unit_perf = unit_perf.sort_values(
+    ["Plant", "CapabilityRealization %"],
+    ascending=[True, True]
+)
+
+unit_perf["PlantUnit"] = (
+    unit_perf["Plant"]
+    + " | "
+    + unit_perf["Unit"]
+)
