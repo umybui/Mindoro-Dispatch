@@ -1639,6 +1639,17 @@ daily_peak_gen = daily_peak_gen.merge(
     how="left"
 )
 
+daily_peak_gen = (
+    daily_peak_gen
+    .groupby(
+        ["Datetime","Plant"],
+        as_index=False
+    )
+    .agg(
+        Value=("Value","sum")
+    )
+)
+
 daily_peak_gen["Share"] = (
     daily_peak_gen["Value"]
     /
@@ -1648,7 +1659,9 @@ daily_peak_gen["Share"] = (
 
 fig_mix = go.Figure()
 
-for plant in peak_snapshot["Plant"]:
+for plant in sorted(
+    daily_peak_gen["Plant"].unique()
+):
 
     temp = daily_peak_gen[
         daily_peak_gen["Plant"] == plant
