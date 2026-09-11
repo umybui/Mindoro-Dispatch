@@ -2130,10 +2130,10 @@ st.subheader(
     "Unit Capability Realization"
 )
 
-if "Unit/Contract" not in df.columns:
+if "Unit" not in df.columns:
 
     st.warning(
-        "Column 'Unit/Contract' not found."
+        "Column 'Unit' not found."
     )
 
 else:
@@ -2146,7 +2146,7 @@ else:
             .eq("ACTUAL (KW)")
         ]
         .groupby(
-            ["Plant", "Unit/Contract"],
+            ["Plant", "Unit"],
             as_index=False
         )
         .agg(
@@ -2162,7 +2162,7 @@ else:
             .eq("GUARANTEED DEPENDABLE CAPACITY (KW)")
         ]
         .groupby(
-            ["Plant", "Unit/Contract"],
+            ["Plant", "Unit"],
             as_index=False
         )
         .agg(
@@ -2172,7 +2172,7 @@ else:
 
     unit_perf = unit_generation.merge(
         unit_dependable,
-        on=["Plant", "Unit/Contract"],
+        on=["Plant", "Unit"],
         how="left"
     )
 
@@ -2191,7 +2191,7 @@ else:
     unit_perf["PlantUnit"] = (
         unit_perf["Plant"]
         + " | "
-        + unit_perf["Unit/Contract"].astype(str)
+        + unit_perf["Unit"].astype(str)
     )
 
     st.dataframe(
