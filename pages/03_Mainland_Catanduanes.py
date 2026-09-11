@@ -1492,3 +1492,555 @@ with st.expander(
         items=plant_order,
         direction="vertical"
     )
+
+# =====================================================
+# PEAK HOUR PERFORMANCE ANALYSIS
+# =====================================================
+
+st.subheader(
+    "Peak Hour Performance Analysis (90%-100% of Peak Demand)"
+)
+
+peak_threshold = peak_demand * 0.90
+
+peak_hours = total_demand.loc[
+    total_demand["Value"] >= peak_threshold,
+    "Datetime"
+]
+
+peak_generation = generation[
+    generation["Datetime"].isin(peak_hours)
+].copy()
+
+# -----------------------------------------------------
+# PEAK HOUR SNAPSHOT
+# -----------------------------------------------------
+
+peak_snapshot = (
+    peak_generation
+    .groupby("Plant")
+    .agg(
+        AvgPeakMW=("Value", "mean"),
+        MaxPeakMW=("Value", "max"),
+        PeakEnergyMWh=("Value", "sum")
+    )
+    .reset_index()
+)
+
+peak_snapshot["PeakEnergyShare %"] = (
+    peak_snapshot["PeakEnergyMWh"]
+    /
+    peak_snapshot["PeakEnergyMWh"].sum()
+    * 100
+)
+
+peak_snapshot = peak_snapshot.sort_values(
+    "PeakEnergyMWh",
+    ascending=False
+)
+
+st.markdown(
+    """
+    **Story:** During hours when system demand reached at least
+    90% of peak demand, the following plants supported the grid.
+    """
+)
+
+st.dataframe(
+    peak_snapshot,
+    use_container_width=True,
+    hide_index=True
+)
+
+fig_peak_support = go.Figure()
+
+fig_peak_support.add_trace(
+    go.Bar(
+        y=peak_snapshot["Plant"],
+        x=peak_snapshot["AvgPeakMW"],
+        orientation="h",
+        text=peak_snapshot["PeakEnergyShare %"].round(1),
+        texttemplate="%{text:.1f}%",
+        textposition="outside"
+    )
+)
+
+fig_peak_support.update_layout(
+    title="Average Dispatch During Peak Hours",
+    xaxis_title="Average MW",
+    yaxis_title="Plant",
+    height=500
+)
+
+st.plotly_chart(
+    fig_peak_support,
+    use_container_width=True
+)
+
+# -----------------------------------------------------
+# CAPACITY DATA
+# -----------------------------------------------------
+
+capacity_data = df[
+    df["Attribute"]
+    .astype(str)
+    .str.upper()
+    .isin(
+        [
+            "INSTALLED CAPACITY (KW)",
+            "DEPENDABLE CAPACITY (KW)",
+            "AVAILABLE CAPACITY (KW)"
+        ]
+    )
+].copy()
+
+capacity_data["Attribute"] = (
+    capacity_data["Attribute"]
+    .astype(str)
+    .str.upper()
+)
+
+available_capacity_tbl = (
+    capacity_data[
+        capacity_data["Attribute"]
+        == "AVAILABLE CAPACITY (KW)"
+    ]
+    .groupby("Plant")
+    .agg(
+        AvailableMW=("Value", "max")
+    )
+    .reset_index()
+)
+
+# -----------------------------------------------------
+# PERFORMANCE TABLE
+# -----------------------------------------------------
+
+performance = peak_snapshot.merge(
+    available_capacity_tbl,
+    on="Plant",
+    how="left"
+)
+
+performance["Achievement %"] = (
+    performance["MaxPeakMW"]
+    /
+    performance["AvailableMW"]
+    * 100
+)
+
+performance.loc[
+    performance["AvailableMW"] <= 0,
+    "Achievement %"
+] = None
+
+# -----------------------------------------------------
+# RISK FLAG
+# -----------------------------------------------------
+
+def get_flag(row):
+
+    avail = row["AvailableMW"]
+    ach = row["Achievement %"]
+
+    if pd.isna(avail):
+        return "No Data"
+
+    if avail <= 0:
+        return "Outage"
+
+    if ach >= 90:
+        return "OK"
+
+    if ach >= 70:
+        return "Monitor"
+
+    return "Investigate"
+
+performance["Risk Flag"] = (
+    performance.apply(
+        get_flag,
+        axis=1
+    )
+)
+
+# -----------------------------------------------------
+# REMARKS
+# -----------------------------------------------------
+
+def get_remarks(row):
+
+    plant = str(row["Plant"]).upper()
+
+    if row["Risk Flag"] == "Outage":
+        return "Unit unavailable during analysis period."
+
+    if row["Risk Flag"] == "OK":
+        return (
+            "Plant achieved available capability "
+            "during peak hours."
+        )
+
+    if row["Risk Flag"] == "Monitor":
+
+        if "MHP" in plant:
+            return (
+                "Moderate hydro utilization. "
+                "Review water availability."
+            )
+
+        return (
+            "Below full capability during peak conditions."
+        )
+
+    if row["Risk Flag"] == "Investigate":
+
+        if "MHP" in plant:
+            return (
+                "Low hydro output versus available "
+                "capacity. Check water resource or "
+                "operational constraints."
+            )
+
+        return (
+            "Available but did not achieve expected "
+            "capability during peak demand. Review "
+            "derating, maintenance, fuel supply, "
+            "or dispatch strategy."
+        )
+
+    return ""
+
+performance["Remarks"] = (
+    performance.apply(
+        get_remarks,
+        axis=1
+    )
+)
+
+performance = performance.sort_values(
+    "Achievement %",
+    ascending=True
+)
+
+st.markdown(
+    """
+    **Story:** Evaluates whether each plant achieved its
+    available capability during critical demand periods.
+    """
+)
+
+st.dataframe(
+    performance[
+        [
+            "Plant",
+            "AvailableMW",
+            "AvgPeakMW",
+            "MaxPeakMW",
+            "Achievement %",
+            "Risk Flag",
+            "Remarks"
+        ]
+    ],
+    use_container_width=True,
+    hide_index=True
+)
+
+# -----------------------------------------------------
+# ACHIEVEMENT CHART
+# -----------------------------------------------------
+
+color_map = {
+    "OK": "green",
+    "Monitor": "gold",
+    "Investigate": "red",
+    "Outage": "gray",
+    "No Data": "lightgray"
+}
+
+fig_perf = go.Figure()
+
+for flag in performance["Risk Flag"].unique():
+
+    temp = performance[
+        performance["Risk Flag"] == flag
+    ]
+
+    fig_perf.add_trace(
+        go.Bar(
+            y=temp["Plant"],
+            x=temp["Achievement %"],
+            orientation="h",
+            name=flag,
+            marker_color=color_map.get(
+                flag,
+                "blue"
+            )
+        )
+    )
+
+fig_perf.update_layout(
+    title=(
+        "Peak Capability Achievement "
+        "(Peak Max MW / Available MW)"
+    ),
+    xaxis_title="Achievement (%)",
+    yaxis_title="Plant",
+    height=600,
+    barmode="group"
+)
+
+fig_perf.add_vline(
+    x=90,
+    line_dash="dash",
+    line_color="green"
+)
+
+fig_perf.add_vline(
+    x=70,
+    line_dash="dash",
+    line_color="orange"
+)
+
+st.plotly_chart(
+    fig_perf,
+    use_container_width=True
+)
+
+# =====================================================
+# SECTION 3
+# ASSET PERFORMANCE ASSESSMENT
+# =====================================================
+
+st.subheader(
+    "Plant Asset Performance Assessment"
+)
+
+st.markdown(
+    """
+    **Story:** Evaluates whether each plant was capable of
+    realizing its available capability at any point during
+    the study period, independent of system peak demand.
+    """
+)
+
+# -----------------------------------------------------
+# AVAILABLE CAPACITY
+# -----------------------------------------------------
+
+available_capacity_tbl = (
+    capacity_data[
+        capacity_data["Attribute"]
+        == "AVAILABLE CAPACITY (KW)"
+    ]
+    .groupby("Plant", as_index=False)
+    .agg(
+        AvailableMW=("Value", "max")
+    )
+)
+
+# -----------------------------------------------------
+# OVERALL PERFORMANCE
+# -----------------------------------------------------
+
+asset_perf = (
+    generation
+    .groupby("Plant", as_index=False)
+    .agg(
+        AvgMW=("Value", "mean"),
+        MaxObservedMW=("Value", "max"),
+        EnergyMWh=("Value", "sum")
+    )
+)
+
+asset_perf = asset_perf.merge(
+    available_capacity_tbl,
+    on="Plant",
+    how="left"
+)
+
+# -----------------------------------------------------
+# UTILIZATION FACTOR
+# -----------------------------------------------------
+
+asset_perf["UtilizationFactor %"] = (
+    asset_perf["AvgMW"]
+    /
+    asset_perf["AvailableMW"]
+    * 100
+)
+
+# -----------------------------------------------------
+# CAPABILITY REALIZATION
+# -----------------------------------------------------
+
+asset_perf["CapabilityRealization %"] = (
+    asset_perf["MaxObservedMW"]
+    /
+    asset_perf["AvailableMW"]
+    * 100
+)
+
+asset_perf.loc[
+    asset_perf["AvailableMW"] <= 0,
+    "CapabilityRealization %"
+] = None
+
+# -----------------------------------------------------
+# RISK FLAG
+# -----------------------------------------------------
+
+def asset_flag(row):
+
+    avail = row["AvailableMW"]
+    realization = row["CapabilityRealization %"]
+
+    if pd.isna(avail):
+        return "No Data"
+
+    if avail <= 0:
+        return "Outage"
+
+    if realization >= 95:
+        return "OK"
+
+    if realization >= 75:
+        return "Monitor"
+
+    return "Investigate"
+
+asset_perf["Risk Flag"] = (
+    asset_perf.apply(
+        asset_flag,
+        axis=1
+    )
+)
+
+# -----------------------------------------------------
+# REMARKS
+# -----------------------------------------------------
+
+def asset_remark(row):
+
+    plant = str(row["Plant"]).upper()
+
+    if row["Risk Flag"] == "Outage":
+        return (
+            "No available capacity recorded."
+        )
+
+    if row["Risk Flag"] == "OK":
+        return (
+            "Plant achieved available capability "
+            "during study period."
+        )
+
+    if row["Risk Flag"] == "Monitor":
+        return (
+            "Plant approached available capability "
+            "but did not fully realize it."
+        )
+
+    if "MHP" in plant:
+        return (
+            "Plant never achieved available capability. "
+            "Investigate water resource, equipment "
+            "condition, or operational constraints."
+        )
+
+    return (
+        "Plant never achieved available capability. "
+        "Review derating, maintenance history, fuel "
+        "availability, and dispatch restrictions."
+    )
+
+asset_perf["Remarks"] = (
+    asset_perf.apply(
+        asset_remark,
+        axis=1
+    )
+)
+
+asset_perf = asset_perf.sort_values(
+    "CapabilityRealization %",
+    ascending=True
+)
+
+# -----------------------------------------------------
+# TABLE
+# -----------------------------------------------------
+
+st.dataframe(
+    asset_perf[
+        [
+            "Plant",
+            "AvailableMW",
+            "AvgMW",
+            "MaxObservedMW",
+            "UtilizationFactor %",
+            "CapabilityRealization %",
+            "Risk Flag",
+            "Remarks"
+        ]
+    ],
+    use_container_width=True,
+    hide_index=True
+)
+
+# -----------------------------------------------------
+# CHART
+# -----------------------------------------------------
+
+asset_color_map = {
+    "OK": "green",
+    "Monitor": "gold",
+    "Investigate": "red",
+    "Outage": "gray",
+    "No Data": "lightgray"
+}
+
+fig_asset = go.Figure()
+
+for flag in asset_perf["Risk Flag"].unique():
+
+    temp = asset_perf[
+        asset_perf["Risk Flag"] == flag
+    ]
+
+    fig_asset.add_trace(
+        go.Bar(
+            y=temp["Plant"],
+            x=temp["CapabilityRealization %"],
+            orientation="h",
+            name=flag,
+            marker_color=asset_color_map.get(
+                flag,
+                "blue"
+            )
+        )
+    )
+
+fig_asset.add_vline(
+    x=95,
+    line_dash="dash",
+    line_color="green"
+)
+
+fig_asset.add_vline(
+    x=75,
+    line_dash="dash",
+    line_color="orange"
+)
+
+fig_asset.update_layout(
+    title="Capability Realization by Plant",
+    xaxis_title="Max Observed MW / Available MW (%)",
+    yaxis_title="Plant",
+    height=650,
+    barmode="group"
+)
+
+st.plotly_chart(
+    fig_asset,
+    use_container_width=True
+)
