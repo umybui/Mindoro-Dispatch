@@ -1626,6 +1626,19 @@ daily_peak_gen = generation.merge(
     how="inner"
 )
 
+# aggregate to PLANT level
+daily_peak_gen = (
+    daily_peak_gen
+    .groupby(
+        ["Datetime", "Plant"],
+        as_index=False
+    )
+    .agg(
+        Value=("Value", "sum")
+    )
+)
+
+# calculate total system generation for each peak hour
 daily_peak_total = (
     daily_peak_gen
     .groupby("Datetime")["Value"]
@@ -1639,23 +1652,13 @@ daily_peak_gen = daily_peak_gen.merge(
     how="left"
 )
 
-daily_peak_gen = (
-    daily_peak_gen
-    .groupby(
-        ["Datetime","Plant"],
-        as_index=False
-    )
-    .agg(
-        Value=("Value","sum")
-    )
-)
-
 daily_peak_gen["Share"] = (
     daily_peak_gen["Value"]
     /
     daily_peak_gen["Total"]
     * 100
 )
+
 
 fig_mix = go.Figure()
 
