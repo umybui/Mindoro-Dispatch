@@ -32,6 +32,13 @@ def load_data():
         errors="coerce"
     )
 
+    df.rename(
+    columns={
+        "Power Plant": "Plant"
+    },
+    inplace=True
+)
+    
     df["Value"] = pd.to_numeric(
     df["Value"],
     errors="coerce"
@@ -40,8 +47,7 @@ def load_data():
     return df
 
 df = load_data()
-st.write(df.columns.tolist())
-st.stop()
+
 # Optional manual refresh
 if st.sidebar.button("Refresh Data"):
     st.cache_data.clear()
