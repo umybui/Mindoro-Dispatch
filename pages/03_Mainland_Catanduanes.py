@@ -2184,29 +2184,7 @@ else:
         )
     )
 
-    st.write("Unit Generation")
-    st.dataframe(unit_generation.head(20))
-
-    st.write("Unit Dependable")
-    st.dataframe(unit_dependable.head(20))
-    
-    unit_perf = unit_generation.merge(
-        unit_dependable,
-        on=["Plant", "Unit"],
-        how="left"
-    )
-
-    st.write(
-        filtered[
-            filtered["Attribute"]
-            .astype(str)
-            .str.upper()
-            .str.contains("DEPENDABLE", na=False)
-        ][["Plant","Unit","Attribute","Value"]]
-        .head(50)
-    )
-
-    unit_perf["CapabilityRealization %"] = (
+       unit_perf["CapabilityRealization %"] = (
         unit_perf["MaxObservedMW"]
         /
         unit_perf["DependableMW"]
