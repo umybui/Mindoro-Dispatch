@@ -568,14 +568,14 @@ st.metric(
 )
 
 st.subheader(
-    "Month-Hour Demand Heatmap"
+    "Hour-Date Demand Heatmap (% of Peak Demand)"
 )
 
 heat_source = total_demand.copy()
 
-heat_source["MonthName"] = (
+heat_source["Date"] = (
     heat_source["Datetime"]
-    .dt.strftime("%b")
+    .dt.strftime("%Y-%m-%d")
 )
 
 heat_source["Hour"] = (
@@ -583,12 +583,18 @@ heat_source["Hour"] = (
     .dt.hour
 )
 
+heat_source["DemandPctPeak"] = (
+    heat_source["Value"]
+    / peak_demand
+    * 100
+)
+
 heat_tbl = (
     heat_source
     .pivot_table(
-        index="MonthName",
-        columns="Hour",
-        values="Value",
+        index="Hour",
+        columns="Date",
+        values="DemandPctPeak",
         aggfunc="mean"
     )
 )
@@ -598,13 +604,18 @@ fig_heat_demand = go.Figure(
         z=heat_tbl.values,
         x=heat_tbl.columns,
         y=heat_tbl.index,
-        colorscale="Viridis"
+        colorscale="RdYlGn_r",
+        zmin=0,
+        zmax=100,
+        colorbar_title="% Peak"
     )
 )
 
 fig_heat_demand.update_layout(
-    title="Average Demand by Month and Hour",
-    height=450
+    title="Demand Heatmap (% of System Peak)",
+    xaxis_title="Date",
+    yaxis_title="Hour",
+    height=500
 )
 
 st.plotly_chart(
@@ -617,7 +628,7 @@ with st.expander(
     expanded=False
 ):
     st.dataframe(
-        heat_tbl,
+        heat_tbl.round(1),
         use_container_width=True
     )
 
