@@ -408,41 +408,6 @@ monthly_summary = (
 
 st.subheader("Monthly Reliability Overview")
 
-heatmap_data = (
-    monthly_summary
-    .set_index("MonthName")
-    [
-        [
-            "PeakDemand",
-            "MaxShortage",
-            "HoursWithShortage",
-            "LowReserveHours",
-            "UnservedEnergy"
-        ]
-    ]
-)
-
-fig_heat = go.Figure(
-    data=go.Heatmap(
-        z=heatmap_data.values,
-        x=heatmap_data.columns,
-        y=heatmap_data.index,
-        colorscale="Reds",
-        text=heatmap_data.round(2),
-        texttemplate="%{text}"
-    )
-)
-
-fig_heat.update_layout(
-    title="Monthly Reliability Heatmap",
-    height=400
-)
-
-st.plotly_chart(
-    fig_heat,
-    use_container_width=True
-)
-
 with st.expander(
     "View Monthly Performance Data",
     expanded=False
