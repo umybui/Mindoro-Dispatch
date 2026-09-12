@@ -386,6 +386,11 @@ gap_df["MonthName"] = (
     .dt.strftime("%b")
 )
 
+gap_df["MonthYear"] = (
+    gap_df["Datetime"]
+    .dt.strftime("%Y-%m")
+)
+
 month_sort = {
     "Jan": 1,
     "Feb": 2,
@@ -403,7 +408,7 @@ month_sort = {
 
 monthly_summary = (
     gap_df
-    .groupby("MonthName")
+    .groupby("MonthYear")
     .agg(
         PeakDemand=("TotalDemand", "max"),
 
@@ -502,58 +507,6 @@ monthly_summary["EnergyNotServedPct"] = (
 )
 
 # =====================================================
-# WORST DAY
-# =====================================================
-
-worst_day_tbl = (
-    gap_df.loc[
-        gap_df.groupby("MonthName")
-        ["ShortageMW"]
-        .idxmax()
-    ]
-    [["MonthName", "Datetime"]]
-)
-
-worst_day_tbl["WorstDay"] = (
-    worst_day_tbl["Datetime"]
-    .dt.strftime("%Y-%m-%d")
-)
-
-monthly_summary = monthly_summary.merge(
-    worst_day_tbl[
-        ["MonthName", "WorstDay"]
-    ],
-    on="MonthName",
-    how="left"
-)
-
-# =====================================================
-# BEST DAY
-# =====================================================
-
-best_day_tbl = (
-    gap_df.loc[
-        gap_df.groupby("MonthName")
-        ["ReserveMargin"]
-        .idxmax()
-    ]
-    [["MonthName", "Datetime"]]
-)
-
-best_day_tbl["BestDay"] = (
-    best_day_tbl["Datetime"]
-    .dt.strftime("%Y-%m-%d")
-)
-
-monthly_summary = monthly_summary.merge(
-    best_day_tbl[
-        ["MonthName", "BestDay"]
-    ],
-    on="MonthName",
-    how="left"
-)
-
-# =====================================================
 # SORT JAN TO DEC
 # =====================================================
 
@@ -573,67 +526,7 @@ monthly_summary = (
     )
 )
 
-# =====================================================
-# CONDITIONAL FORMATTING
-# =====================================================
-
-def reserve_color(v):
-
-    if pd.isna(v):
-        return ""
-
-    if v < 0:
-        return "background-color:#ffb3b3"
-
-    if v < 5:
-        return "background-color:#fff3b0"
-
-    return "background-color:#c6efce"
-
-
-def adequacy_color(v):
-
-    if pd.isna(v):
-        return ""
-
-    if v < 90:
-        return "background-color:#ffb3b3"
-
-    if v < 98:
-        return "background-color:#fff3b0"
-
-    return "background-color:#c6efce"
-
-
-def shortage_hours_color(v):
-
-    if pd.isna(v):
-        return ""
-
-    if v > 24:
-        return "background-color:#ffb3b3"
-
-    if v > 0:
-        return "background-color:#fff3b0"
-
-    return "background-color:#c6efce"
-
-
-def unserved_color(v):
-
-    if pd.isna(v):
-        return ""
-
-    if v > 20:
-        return "background-color:#ffb3b3"
-
-    if v > 0:
-        return "background-color:#fff3b0"
-
-    return "background-color:#c6efce"
-
-
-styled_monthly = (
+monthly_display = (
     monthly_summary[
         [
             "MonthName",
@@ -647,9 +540,7 @@ styled_monthly = (
             "UnservedEnergy",
             "LoadFactor",
             "ReserveAdequacyPct",
-            "EnergyNotServedPct",
-            "WorstDay",
-            "BestDay"
+            "EnergyNotServedPct"
         ]
     ]
 )
@@ -657,34 +548,18 @@ styled_monthly = (
 st.subheader("Monthly Reliability Overview")
 
 st.dataframe(
-    styled_monthly.style
-        .map(
-            reserve_color,
-            subset=["MinimumReserve"]
-        )
-        .map(
-            adequacy_color,
-            subset=["ReserveAdequacyPct"]
-        )
-        .map(
-            shortage_hours_color,
-            subset=["HoursWithShortage"]
-        )
-        .map(
-            unserved_color,
-            subset=["UnservedEnergy"]
-        )
-        .format({
-            "PeakDemand": "{:.2f}",
-            "AverageDemand": "{:.2f}",
-            "MinimumReserve": "{:.2f}",
-            "MaxShortage": "{:.2f}",
-            "UnservedEnergy": "{:.2f}",
-            "LoadFactor": "{:.1f}%",
-            "ReserveAdequacyPct": "{:.1f}%",
-            "EnergyNotServedPct": "{:.2f}%"
-        }),
-    use_container_width=True
+    monthly_display.round({
+        "PeakDemand": 2,
+        "AverageDemand": 2,
+        "MinimumReserve": 2,
+        "MaxShortage": 2,
+        "UnservedEnergy": 2,
+        "LoadFactor": 1,
+        "ReserveAdequacyPct": 1,
+        "EnergyNotServedPct": 2
+    }),
+    use_container_width=True,
+    hide_index=True
 )
     
 # =====================================================
