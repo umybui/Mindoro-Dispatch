@@ -658,34 +658,28 @@ st.subheader("Monthly Reliability Overview")
 
 st.dataframe(
     styled_monthly.style
-        .applymap(
+        .map(
             reserve_color,
             subset=["MinimumReserve"]
         )
-        .applymap(
+        .map(
             adequacy_color,
             subset=["ReserveAdequacyPct"]
         )
-        .applymap(
+        .map(
             shortage_hours_color,
             subset=["HoursWithShortage"]
         )
-        .applymap(
+        .map(
             unserved_color,
             subset=["UnservedEnergy"]
         )
         .format({
-            "PeakDemand":"{:.2f}",
-            "AverageDemand":"{:.2f}",
-            "MinimumReserve":"{:.2f}",
-            "MaxShortage":"{:.2f}",
-            "UnservedEnergy":"{:.2f}",
-            "LoadFactor":"{:.1f}%",
-            "ReserveAdequacyPct":"{:.1f}%",
-            "EnergyNotServedPct":"{:.2f}%"
-        }),
-    use_container_width=True
-)
+            "PeakDemand": "{:.2f}",
+            "AverageDemand": "{:.2f}",
+            "MinimumReserve": "{:.2f}",
+            "MaxShortage": "{:.2f}",
+            "UnservedEnergy
 
 # =====================================================
 # BOXPLOTS
