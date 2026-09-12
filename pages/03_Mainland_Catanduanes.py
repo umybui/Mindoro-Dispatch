@@ -638,7 +638,21 @@ styled_monthly = (
         [
             "MonthName",
             "PeakDemand",
-            "AverageDemand
+            "AverageDemand",
+            "MinimumReserve",
+            "MaxShortage",
+            "HoursWithShortage",
+            "CriticalHours",
+            "LowReserveHours",
+            "UnservedEnergy",
+            "LoadFactor",
+            "ReserveAdequacyPct",
+            "EnergyNotServedPct",
+            "WorstDay",
+            "BestDay"
+        ]
+    ]
+)
 
 # =====================================================
 # BOXPLOTS
