@@ -412,6 +412,10 @@ monthly_summary = (
     .agg(
         PeakDemand=("TotalDemand", "max"),
 
+monthly_summary["MonthName"] = pd.to_datetime(
+    monthly_summary["MonthYear"]
+).dt.strftime("%b %Y")
+        
         AverageDemand=(
             "TotalDemand",
             "mean"
