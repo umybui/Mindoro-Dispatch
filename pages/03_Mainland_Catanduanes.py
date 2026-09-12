@@ -2626,34 +2626,34 @@ else:
         ascending=[True,True]
     )
 
-    # -------------------------------------------------
+        # -------------------------------------------------
     # TABLE
     # -------------------------------------------------
 
-   with st.expander(
-    "View Unit Capability Realization Table",
-    expanded=False
+    with st.expander(
+        "View Unit Capability Realization Table",
+        expanded=False
     ):
-    st.dataframe(
-        unit_perf[
-            [
-                "Plant",
-                "Unit",
-                "DependableMW",
-                "AvgMW",
-                "MaxObservedMW",
-                "OperatingHours",
-                "HoursAbove80Pct",
-                "UtilizationFactor %",
-                "CapabilityRealization %",
-                "SustainedCapability %",
-                "Risk Flag",
-                "Remarks"
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True
-    )
+        st.dataframe(
+            unit_perf[
+                [
+                    "Plant",
+                    "Unit",
+                    "DependableMW",
+                    "AvgMW",
+                    "MaxObservedMW",
+                    "OperatingHours",
+                    "HoursAbove80Pct",
+                    "UtilizationFactor %",
+                    "CapabilityRealization %",
+                    "SustainedCapability %",
+                    "Risk Flag",
+                    "Remarks"
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True
+        )
 
     # -------------------------------------------------
     # CHART
