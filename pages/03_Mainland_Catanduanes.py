@@ -406,13 +406,52 @@ monthly_summary = (
     .reset_index()
 )
 
-st.caption("Monthly Performance Summary")
+st.subheader("Monthly Reliability Overview")
 
-st.dataframe(
-    monthly_summary,
-    use_container_width=True,
-    hide_index=True
+heatmap_data = (
+    monthly_summary
+    .set_index("MonthName")
+    [
+        [
+            "PeakDemand",
+            "MaxShortage",
+            "HoursWithShortage",
+            "LowReserveHours",
+            "UnservedEnergy"
+        ]
+    ]
 )
+
+fig_heat = go.Figure(
+    data=go.Heatmap(
+        z=heatmap_data.values,
+        x=heatmap_data.columns,
+        y=heatmap_data.index,
+        colorscale="Reds",
+        text=heatmap_data.round(2),
+        texttemplate="%{text}"
+    )
+)
+
+fig_heat.update_layout(
+    title="Monthly Reliability Heatmap",
+    height=400
+)
+
+st.plotly_chart(
+    fig_heat,
+    use_container_width=True
+)
+
+with st.expander(
+    "View Monthly Performance Data",
+    expanded=False
+):
+    st.dataframe(
+        monthly_summary,
+        use_container_width=True,
+        hide_index=True
+    )
 
 # =====================================================
 # BOXPLOTS
@@ -527,6 +566,60 @@ st.metric(
     "Load Factor",
     f"{load_factor:.1f}%"
 )
+
+st.subheader(
+    "Month-Hour Demand Heatmap"
+)
+
+heat_source = total_demand.copy()
+
+heat_source["MonthName"] = (
+    heat_source["Datetime"]
+    .dt.strftime("%b")
+)
+
+heat_source["Hour"] = (
+    heat_source["Datetime"]
+    .dt.hour
+)
+
+heat_tbl = (
+    heat_source
+    .pivot_table(
+        index="MonthName",
+        columns="Hour",
+        values="Value",
+        aggfunc="mean"
+    )
+)
+
+fig_heat_demand = go.Figure(
+    data=go.Heatmap(
+        z=heat_tbl.values,
+        x=heat_tbl.columns,
+        y=heat_tbl.index,
+        colorscale="Viridis"
+    )
+)
+
+fig_heat_demand.update_layout(
+    title="Average Demand by Month and Hour",
+    height=450
+)
+
+st.plotly_chart(
+    fig_heat_demand,
+    use_container_width=True
+)
+
+with st.expander(
+    "View Heatmap Source Data",
+    expanded=False
+):
+    st.dataframe(
+        heat_tbl,
+        use_container_width=True
+    )
 
 # =====================================================
 # LDC SEGMENT SETTINGS
@@ -804,46 +897,26 @@ ldc_pct = (
 
 st.caption("Load Segment Summary")
 
-st.metric(
-    "Total Segmentation SSE",
-    f"{total_sse:,.0f}"
-)
+with st.expander(
+    "Advanced LDC Segmentation Analysis",
+    expanded=False
+):
 
-fig_elbow = go.Figure()
-
-fig_elbow.add_trace(
-    go.Scatter(
-        x=sse_df["Segments"],
-        y=sse_df["SSE"],
-        mode="lines+markers",
-        name="SSE"
+    st.metric(
+        "Total Segmentation SSE",
+        f"{total_sse:,.0f}"
     )
-)
 
-fig_elbow.add_vline(
-    x=recommended_segments,
-    line_dash="dash",
-    annotation_text=
-        f"Recommended ({recommended_segments})"
-)
+    st.plotly_chart(
+        fig_elbow,
+        use_container_width=True
+    )
 
-fig_elbow.update_layout(
-    title="Elbow Method",
-    xaxis_title="Number of Segments",
-    yaxis_title="SSE",
-    height=350
-)
-
-st.plotly_chart(
-    fig_elbow,
-    use_container_width=True
-)
-
-st.dataframe(
-    segment_table,
-    use_container_width=True,
-    hide_index=True
-)
+    st.dataframe(
+        segment_table,
+        use_container_width=True,
+        hide_index=True
+    )
 
 fig_ldc = go.Figure()
 
@@ -1060,12 +1133,46 @@ for event_id, grp in gap_df.groupby("EventID"):
 
 shortage_events = pd.DataFrame(events)
 
-st.dataframe(
-    shortage_events,
-    height=350,
-    use_container_width=True,
-    hide_index=True
-)
+if len(shortage_events) > 0:
+
+    fig_shortage = go.Figure()
+
+    fig_shortage.add_trace(
+        go.Bar(
+            y=[
+                f"Event {i+1}"
+                for i in range(len(shortage_events))
+            ],
+            x=shortage_events["Duration Hours"],
+            orientation="h",
+            text=shortage_events[
+                "Max Shortage MW"
+            ].round(2),
+            texttemplate="%{text} MW"
+        )
+    )
+
+    fig_shortage.update_layout(
+        title="Shortage Event Duration",
+        xaxis_title="Hours",
+        height=450
+    )
+
+    st.plotly_chart(
+        fig_shortage,
+        use_container_width=True
+    )
+
+with st.expander(
+    "View Shortage Event Data",
+    expanded=False
+):
+    st.dataframe(
+        shortage_events,
+        height=350,
+        use_container_width=True,
+        hide_index=True
+    )
 
 st.subheader("Plant Contribution Analysis")
 
@@ -1124,29 +1231,59 @@ with c1:
 
 with c2:
 
-    fig_contrib = go.Figure()
+    pareto = plant_summary.copy()
 
-    fig_contrib.add_trace(
-        go.Bar(
-            x=plant_summary["Plant"],
-            y=plant_summary["EnergyMWh"],
-            text=plant_summary["Contribution %"].round(1),
-            texttemplate="%{text:.1f}%",
-            textposition="outside"
-        )
+pareto["Cumulative %"] = (
+    pareto["Contribution %"]
+    .cumsum()
+)
+
+fig_pareto = go.Figure()
+
+fig_pareto.add_trace(
+    go.Bar(
+        x=pareto["Plant"],
+        y=pareto["Contribution %"],
+        name="Contribution %"
     )
+)
 
-    fig_contrib.update_layout(
-        title="Plant Energy Contribution",
-        xaxis_title="Plant",
-        yaxis_title="Energy (MWh)",
-        xaxis_tickangle=-45,
-        height=600
+fig_pareto.add_trace(
+    go.Scatter(
+        x=pareto["Plant"],
+        y=pareto["Cumulative %"],
+        name="Cumulative %",
+        yaxis="y2",
+        mode="lines+markers"
     )
+)
 
-    st.plotly_chart(
-        fig_contrib,
-        use_container_width=True
+fig_pareto.update_layout(
+    title="Plant Contribution Pareto",
+    yaxis=dict(
+        title="Contribution %"
+    ),
+    yaxis2=dict(
+        title="Cumulative %",
+        overlaying="y",
+        side="right"
+    ),
+    height=600
+)
+
+st.plotly_chart(
+    fig_pareto,
+    use_container_width=True
+)
+
+with st.expander(
+    "View Plant Contribution Data",
+    expanded=False
+):
+    st.dataframe(
+        plant_summary,
+        use_container_width=True,
+        hide_index=True
     )
 
 st.subheader(
@@ -1567,11 +1704,24 @@ st.markdown(
     """
 )
 
-st.dataframe(
-    peak_snapshot,
-    use_container_width=True,
-    hide_index=True
-)
+with st.expander(
+    "Peak Hour Snapshot (90%-100% of Peak Demand)",
+    expanded=False
+):
+    st.dataframe(
+        peak_snapshot[
+            [
+                "Plant",
+                "Unit",
+                "AvgPeakMW",
+                "MaxPeakMW",
+                "PeakEnergyMWh",
+                "PeakEnergyShare %"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
 
 fig_peak_support = go.Figure()
 
@@ -1883,24 +2033,28 @@ demand periods.
     """
 )
 
-st.dataframe(
-    performance[
-        [
-    "Plant",
-    "Unit",
-    "InstalledMW",
-    "DependableMW",
-    "AvailableMW",
-    "AvgPeakMW",
-    "MaxPeakMW",
-    "Peak Support %",
-    "Risk Flag",
-    "Remarks"
-]
-    ],
-    use_container_width=True,
-    hide_index=True
-)
+with st.expander(
+    "View Peak Hour Performance Table",
+    expanded=False
+):
+    st.dataframe(
+        performance[
+            [
+                "Plant",
+                "Unit",
+                "InstalledMW",
+                "DependableMW",
+                "AvailableMW",
+                "AvgPeakMW",
+                "MaxPeakMW",
+                "Peak Support %",
+                "Risk Flag",
+                "Remarks"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
 
 # -----------------------------------------------------
 # ACHIEVEMENT CHART
@@ -2160,22 +2314,26 @@ asset_perf = asset_perf.sort_values(
 # TABLE
 # -----------------------------------------------------
 
-st.dataframe(
-    asset_perf[
-        [
-            "Plant",
-            "DependableMW",
-            "AvgMW",
-            "MaxObservedMW",
-            "UtilizationFactor %",
-            "CapabilityRealization %",
-            "Risk Flag",
-            "Remarks"
-        ]
-    ],
-    use_container_width=True,
-    hide_index=True
-)
+with st.expander(
+    "View Plant Asset Performance Table",
+    expanded=False
+):
+    st.dataframe(
+        asset_perf[
+            [
+                "Plant",
+                "DependableMW",
+                "AvgMW",
+                "MaxObservedMW",
+                "UtilizationFactor %",
+                "CapabilityRealization %",
+                "Risk Flag",
+                "Remarks"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
 
 # -----------------------------------------------------
 # CHART
@@ -2472,6 +2630,10 @@ else:
     # TABLE
     # -------------------------------------------------
 
+   with st.expander(
+    "View Unit Capability Realization Table",
+    expanded=False
+    ):
     st.dataframe(
         unit_perf[
             [
