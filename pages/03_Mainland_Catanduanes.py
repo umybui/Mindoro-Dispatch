@@ -939,6 +939,8 @@ ldc_pct = (
 
 st.caption("Load Segment Summary")
 
+fig_elbow = go.Figure()
+
 with st.expander(
     "Advanced LDC Segmentation Analysis",
     expanded=False
