@@ -381,30 +381,11 @@ with r2c2:
 # MONTHLY RELIABILITY OVERVIEW
 # =====================================================
 
-gap_df["MonthName"] = (
-    gap_df["Datetime"]
-    .dt.strftime("%b")
-)
-
 gap_df["MonthYear"] = (
     gap_df["Datetime"]
-    .dt.strftime("%Y-%m")
+    .dt.to_period("M")
+    .astype(str)
 )
-
-month_sort = {
-    "Jan": 1,
-    "Feb": 2,
-    "Mar": 3,
-    "Apr": 4,
-    "May": 5,
-    "Jun": 6,
-    "Jul": 7,
-    "Aug": 8,
-    "Sep": 9,
-    "Oct": 10,
-    "Nov": 11,
-    "Dec": 12
-}
 
 monthly_summary = (
     gap_df
@@ -412,10 +393,6 @@ monthly_summary = (
     .agg(
         PeakDemand=("TotalDemand", "max"),
 
-monthly_summary["MonthName"] = pd.to_datetime(
-    monthly_summary["MonthYear"]
-).dt.strftime("%b %Y")
-        
         AverageDemand=(
             "TotalDemand",
             "mean"
@@ -462,6 +439,15 @@ monthly_summary["MonthName"] = pd.to_datetime(
     .reset_index()
 )
 
+monthly_summary["MonthDate"] = pd.to_datetime(
+    monthly_summary["MonthYear"]
+)
+
+monthly_summary["MonthName"] = (
+    monthly_summary["MonthDate"]
+    .dt.strftime("%b %Y")
+)
+
 monthly_summary["LoadFactor"] = (
     monthly_summary["AverageDemand"]
     /
@@ -469,65 +455,44 @@ monthly_summary["LoadFactor"] = (
     * 100
 )
 
-# =====================================================
-# RESERVE ADEQUACY
-# =====================================================
-
 hours_per_month = (
     gap_df
-    .groupby("MonthName")
+    .groupby("MonthYear")
     .size()
     .reset_index(name="TotalHours")
 )
 
 monthly_summary = monthly_summary.merge(
     hours_per_month,
-    on="MonthName",
+    on="MonthYear",
     how="left"
 )
 
 monthly_summary["ReserveAdequacyPct"] = (
     (
         monthly_summary["TotalHours"]
-        - monthly_summary["LowReserveHours"]
+        -
+        monthly_summary["LowReserveHours"]
     )
     /
     monthly_summary["TotalHours"]
     * 100
 )
 
-# =====================================================
-# ENERGY NOT SERVED %
-# =====================================================
-
 monthly_summary["EnergyNotServedPct"] = (
     monthly_summary["UnservedEnergy"]
     /
     (
         monthly_summary["AverageDemand"]
-        * monthly_summary["TotalHours"]
+        *
+        monthly_summary["TotalHours"]
     )
     * 100
 )
 
-# =====================================================
-# SORT JAN TO DEC
-# =====================================================
-
-monthly_summary["MonthSort"] = (
-    monthly_summary["MonthName"]
-    .map(month_sort)
-)
-
 monthly_summary = (
     monthly_summary
-    .sort_values("MonthSort")
-    .drop(
-        columns=[
-            "MonthSort",
-            "TotalHours"
-        ]
-    )
+    .sort_values("MonthDate")
 )
 
 monthly_display = (
@@ -549,7 +514,9 @@ monthly_display = (
     ]
 )
 
-st.subheader("Monthly Reliability Overview")
+st.subheader(
+    "Monthly Reliability Overview"
+)
 
 st.dataframe(
     monthly_display.round({
@@ -565,7 +532,7 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
-    
+
 # =====================================================
 # BOXPLOTS
 # =====================================================
