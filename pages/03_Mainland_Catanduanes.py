@@ -387,23 +387,75 @@ monthly_summary = (
     .groupby("MonthName")
     .agg(
         PeakDemand=("TotalDemand", "max"),
-        MaxShortage=("ShortageMW", "max"),
+
+        AverageDemand=(
+            "TotalDemand",
+            "mean"
+        ),
+
+        MinimumReserve=(
+            "ReserveMargin",
+            "min"
+        ),
+
+        MaxShortage=(
+            "ShortageMW",
+            "max"
+        ),
+
         HoursWithShortage=(
-        "ShortageMW",
-        lambda x: (
-        x >= SHORTAGE_THRESHOLD
-        ).sum()
-    ),
+            "ShortageMW",
+            lambda x: (
+                x >= SHORTAGE_THRESHOLD
+            ).sum()
+        ),
+
+        CriticalHours=(
+            "ReserveMargin",
+            lambda x: (
+                x < 0
+            ).sum()
+        ),
+
         LowReserveHours=(
             "ReserveMargin",
-            lambda x: (x < 5).sum()
+            lambda x: (
+                x < 5
+            ).sum()
         ),
+
         UnservedEnergy=(
             "ShortageMW",
-            lambda x: x.clip(lower=0).sum()
+            lambda x: (
+                x.clip(lower=0)
+            ).sum()
         )
     )
     .reset_index()
+)
+
+monthly_summary["LoadFactor"] = (
+    monthly_summary["AverageDemand"]
+    /
+    monthly_summary["PeakDemand"]
+    * 100
+)
+
+def monthly_status(row):
+
+    if row["HoursWithShortage"] > 0:
+        return "CRITICAL"
+
+    if row["MinimumReserve"] < 2:
+        return "MONITOR"
+
+    return "NORMAL"
+
+monthly_summary["Status"] = (
+    monthly_summary.apply(
+        monthly_status,
+        axis=1
+    )
 )
 
 st.subheader("Monthly Reliability Overview")
@@ -413,10 +465,24 @@ with st.expander(
     expanded=False
 ):
     st.dataframe(
-        monthly_summary,
-        use_container_width=True,
-        hide_index=True
-    )
+    monthly_summary[
+        [
+            "MonthName",
+            "PeakDemand",
+            "AverageDemand",
+            "LoadFactor",
+            "MinimumReserve",
+            "MaxShortage",
+            "HoursWithShortage",
+            "CriticalHours",
+            "LowReserveHours",
+            "UnservedEnergy",
+            "Status"
+        ]
+    ],
+    use_container_width=True,
+    hide_index=True
+)
 
 # =====================================================
 # BOXPLOTS
