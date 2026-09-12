@@ -377,10 +377,29 @@ with r2c2:
         )
     )
 
+# =====================================================
+# MONTHLY RELIABILITY OVERVIEW
+# =====================================================
+
 gap_df["MonthName"] = (
     gap_df["Datetime"]
     .dt.strftime("%b")
 )
+
+month_sort = {
+    "Jan": 1,
+    "Feb": 2,
+    "Mar": 3,
+    "Apr": 4,
+    "May": 5,
+    "Jun": 6,
+    "Jul": 7,
+    "Aug": 8,
+    "Sep": 9,
+    "Oct": 10,
+    "Nov": 11,
+    "Dec": 12
+}
 
 monthly_summary = (
     gap_df
@@ -441,48 +460,185 @@ monthly_summary["LoadFactor"] = (
     * 100
 )
 
-def monthly_status(row):
+# =====================================================
+# RESERVE ADEQUACY
+# =====================================================
 
-    if row["HoursWithShortage"] > 0:
-        return "CRITICAL"
+hours_per_month = (
+    gap_df
+    .groupby("MonthName")
+    .size()
+    .reset_index(name="TotalHours")
+)
 
-    if row["MinimumReserve"] < 2:
-        return "MONITOR"
+monthly_summary = monthly_summary.merge(
+    hours_per_month,
+    on="MonthName",
+    how="left"
+)
 
-    return "NORMAL"
+monthly_summary["ReserveAdequacyPct"] = (
+    (
+        monthly_summary["TotalHours"]
+        - monthly_summary["LowReserveHours"]
+    )
+    /
+    monthly_summary["TotalHours"]
+    * 100
+)
 
-monthly_summary["Status"] = (
-    monthly_summary.apply(
-        monthly_status,
-        axis=1
+# =====================================================
+# ENERGY NOT SERVED %
+# =====================================================
+
+monthly_summary["EnergyNotServedPct"] = (
+    monthly_summary["UnservedEnergy"]
+    /
+    (
+        monthly_summary["AverageDemand"]
+        * monthly_summary["TotalHours"]
+    )
+    * 100
+)
+
+# =====================================================
+# WORST DAY
+# =====================================================
+
+worst_day_tbl = (
+    gap_df.loc[
+        gap_df.groupby("MonthName")
+        ["ShortageMW"]
+        .idxmax()
+    ]
+    [["MonthName", "Datetime"]]
+)
+
+worst_day_tbl["WorstDay"] = (
+    worst_day_tbl["Datetime"]
+    .dt.strftime("%Y-%m-%d")
+)
+
+monthly_summary = monthly_summary.merge(
+    worst_day_tbl[
+        ["MonthName", "WorstDay"]
+    ],
+    on="MonthName",
+    how="left"
+)
+
+# =====================================================
+# BEST DAY
+# =====================================================
+
+best_day_tbl = (
+    gap_df.loc[
+        gap_df.groupby("MonthName")
+        ["ReserveMargin"]
+        .idxmax()
+    ]
+    [["MonthName", "Datetime"]]
+)
+
+best_day_tbl["BestDay"] = (
+    best_day_tbl["Datetime"]
+    .dt.strftime("%Y-%m-%d")
+)
+
+monthly_summary = monthly_summary.merge(
+    best_day_tbl[
+        ["MonthName", "BestDay"]
+    ],
+    on="MonthName",
+    how="left"
+)
+
+# =====================================================
+# SORT JAN TO DEC
+# =====================================================
+
+monthly_summary["MonthSort"] = (
+    monthly_summary["MonthName"]
+    .map(month_sort)
+)
+
+monthly_summary = (
+    monthly_summary
+    .sort_values("MonthSort")
+    .drop(
+        columns=[
+            "MonthSort",
+            "TotalHours"
+        ]
     )
 )
 
-st.subheader("Monthly Reliability Overview")
+# =====================================================
+# CONDITIONAL FORMATTING
+# =====================================================
 
-with st.expander(
-    "View Monthly Performance Data",
-    expanded=False
-):
-    st.dataframe(
+def reserve_color(v):
+
+    if pd.isna(v):
+        return ""
+
+    if v < 0:
+        return "background-color:#ffb3b3"
+
+    if v < 5:
+        return "background-color:#fff3b0"
+
+    return "background-color:#c6efce"
+
+
+def adequacy_color(v):
+
+    if pd.isna(v):
+        return ""
+
+    if v < 90:
+        return "background-color:#ffb3b3"
+
+    if v < 98:
+        return "background-color:#fff3b0"
+
+    return "background-color:#c6efce"
+
+
+def shortage_hours_color(v):
+
+    if pd.isna(v):
+        return ""
+
+    if v > 24:
+        return "background-color:#ffb3b3"
+
+    if v > 0:
+        return "background-color:#fff3b0"
+
+    return "background-color:#c6efce"
+
+
+def unserved_color(v):
+
+    if pd.isna(v):
+        return ""
+
+    if v > 20:
+        return "background-color:#ffb3b3"
+
+    if v > 0:
+        return "background-color:#fff3b0"
+
+    return "background-color:#c6efce"
+
+
+styled_monthly = (
     monthly_summary[
         [
             "MonthName",
             "PeakDemand",
-            "AverageDemand",
-            "LoadFactor",
-            "MinimumReserve",
-            "MaxShortage",
-            "HoursWithShortage",
-            "CriticalHours",
-            "LowReserveHours",
-            "UnservedEnergy",
-            "Status"
-        ]
-    ],
-    use_container_width=True,
-    hide_index=True
-)
+            "AverageDemand
 
 # =====================================================
 # BOXPLOTS
