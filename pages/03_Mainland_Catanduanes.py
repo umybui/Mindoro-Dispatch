@@ -683,35 +683,6 @@ st.dataframe(
             "LoadFactor": "{:.1f}%",
             "ReserveAdequacyPct": "{:.1f}%",
             "EnergyNotServedPct": "{:.2f}%"
-        })
-
-st.dataframe(
-    styled_monthly.style
-        .map(
-            reserve_color,
-            subset=["MinimumReserve"]
-        )
-        .map(
-            adequacy_color,
-            subset=["ReserveAdequacyPct"]
-        )
-        .map(
-            shortage_hours_color,
-            subset=["HoursWithShortage"]
-        )
-        .map(
-            unserved_color,
-            subset=["UnservedEnergy"]
-        )
-        .format({
-            "PeakDemand": "{:.2f}",
-            "AverageDemand": "{:.2f}",
-            "MinimumReserve": "{:.2f}",
-            "MaxShortage": "{:.2f}",
-            "UnservedEnergy": "{:.2f}",
-            "LoadFactor": "{:.1f}%",
-            "ReserveAdequacyPct": "{:.1f}%",
-            "EnergyNotServedPct": "{:.2f}%"
         }),
     use_container_width=True
 )
