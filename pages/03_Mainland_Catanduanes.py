@@ -990,19 +990,147 @@ st.caption("Load Segment Summary")
 
 fig_elbow = go.Figure()
 
+fig_elbow.add_trace(
+    go.Scatter(
+        x=sse_df["Segments"],
+        y=sse_df["SSE"],
+        mode="lines+markers",
+        name="Total SSE"
+    )
+)
+
+fig_elbow.add_trace(
+    go.Scatter(
+        x=[recommended_segments],
+        y=[
+            sse_df.loc[
+                sse_df["Segments"] == recommended_segments,
+                "SSE"
+            ].iloc[0]
+        ],
+        mode="markers",
+        marker=dict(
+            size=14,
+            color="red",
+            symbol="star"
+        ),
+        name="Recommended"
+    )
+)
+
+fig_elbow.update_layout(
+    title="Elbow Method for Load Segmentation",
+    xaxis_title="Number of Segments",
+    yaxis_title="Segmentation SSE",
+    height=400
+)
+
+selected_sse = float(total_sse)
+
+recommended_sse = float(
+    sse_df.loc[
+        sse_df["Segments"] == recommended_segments,
+        "SSE"
+    ].iloc[0]
+)
+
 with st.expander(
     "Advanced LDC Segmentation Analysis",
     expanded=False
 ):
 
     st.metric(
-        "Total Segmentation SSE",
-        f"{total_sse:,.0f}"
+        "Current Segmentation SSE",
+        f"{selected_sse:,.0f}"
     )
+
+    st.markdown(
+        f"""
+### Recommended Segmentation: {recommended_segments} Segments
+
+The elbow analysis indicates that most of the reduction in
+segmentation error is achieved by approximately
+**{recommended_segments} segments**.
+
+Beyond this point, additional segments improve accuracy
+more slowly while increasing model complexity.
+
+**Current Selection:** {num_segments} Segments
+"""
+    )
+
+    if num_segments == recommended_segments:
+
+        st.success(
+            f"""
+The current selection matches the recommended value.
+
+A {num_segments}-segment model provides a balanced
+representation of the Load Duration Curve while keeping
+the segmentation simple enough for planning and dispatch
+analysis.
+"""
+        )
+
+    elif num_segments < recommended_segments:
+
+        st.warning(
+            f"""
+The current selection is simpler than the recommended
+{recommended_segments}-segment model.
+
+While easier to interpret, some distinct demand regimes
+may be merged together, resulting in higher SSE.
+"""
+        )
+
+    else:
+
+        improvement_pct = (
+            (recommended_sse - selected_sse)
+            / recommended_sse
+            * 100
+        )
+
+        st.info(
+            f"""
+The current selection contains more segments than the
+recommended {recommended_segments}-segment model.
+
+This reduces SSE further but adds complexity.
+
+Compared with the recommended segmentation,
+error is reduced by approximately
+{abs(improvement_pct):.1f}%.
+"""
+        )
 
     st.plotly_chart(
         fig_elbow,
         use_container_width=True
+    )
+
+    peak_segment = segment_table.iloc[0]
+    base_segment = segment_table.iloc[-1]
+
+    st.markdown(
+        f"""
+### Operational Interpretation
+
+The selected **{num_segments}-segment** model divides
+the annual Load Duration Curve into **{num_segments}
+natural demand regimes**.
+
+• Highest demand segment (**{peak_segment['Segment']}**) occurs during approximately **{peak_segment['% Time']:.1f}%** of the year.
+
+• Lowest demand segment (**{base_segment['Segment']}**) occurs during approximately **{base_segment['% Time']:.1f}%** of the year.
+
+• Total segmentation error is **{selected_sse:,.0f} SSE**.
+
+• These segments can be used for dispatch planning,
+capacity adequacy assessments, reserve studies,
+and generation portfolio analysis.
+"""
     )
 
     st.dataframe(
