@@ -1785,9 +1785,22 @@ peak_mix_display = (
 )
 
 with st.expander(
-    f"Peak Demand Snapshot ({peak_datetime:%Y-%m-%d %H:%M})",
+    "View Generation Mix at Peak Demand Data",
     expanded=False
 ):
+    st.dataframe(
+        peak_mix_display.round({
+            "Value": 2,
+            "Percent": 2
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
+
+with st.expander(
+    f"Peak Demand Snapshot ({peak_datetime:%Y-%m-%d %H:%M})",
+    expanded=False
+)
 
 fig_peak_mix = go.Figure()
 
