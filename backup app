@@ -1836,6 +1836,29 @@ st.plotly_chart(
 )
 
 # -----------------------------------------------------
+# CAPACITY DATA
+# -----------------------------------------------------
+
+capacity_data = df[
+    df["Attribute"]
+    .astype(str)
+    .str.upper()
+    .isin(
+        [
+            "INSTALLED CAPACITY (KW)",
+            "GUARANTEED DEPENDABLE CAPACITY (KW)",
+            "AVAILABLE CAPACITY (KW)"
+        ]
+    )
+].copy()
+
+capacity_data["Attribute"] = (
+    capacity_data["Attribute"]
+    .astype(str)
+    .str.upper()
+)
+
+# -----------------------------------------------------
 # CAPACITY SCENARIO
 # -----------------------------------------------------
 
@@ -1846,13 +1869,10 @@ st.sidebar.subheader(
 retired_plants = st.sidebar.multiselect(
     "Scenario: Retired / Unavailable Plants",
     options=sorted(
-    capacity_data.get(
-        "Plant",
-        pd.Series(dtype=str)
-    )
-    .dropna()
-    .unique()
-),
+        capacity_data["Plant"]
+        .dropna()
+        .unique()
+    ),
     default=[]
 )
 
@@ -1920,7 +1940,7 @@ removed_capacity_tbl = (
         RemovedMW=("DependableMW", "sum")
     )
     .sort_values(
-        "RemoveMW",
+        "RemovedMW",
         ascending=False
     )
 )
@@ -2570,14 +2590,14 @@ performance.loc[
 
 def get_flag(row):
 
-    avail = row["DependableMW"]
+    available = row["AvailableMW"]
     ach = row["Peak Support %"]
 
-    if pd.isna(avail):
+    if pd.isna(available):
         return "No Data"
 
-    if avail <= 0:
-        return "Outage"
+    if available <= 0:
+        return "Unavailable"
 
     plant = str(row["Plant"]).upper()
 
@@ -2589,7 +2609,7 @@ def get_flag(row):
         if ach >= 40:
             return "Monitor"
 
-        return "Investigate"
+        return "Underperforming"
 
     else:
 
@@ -2599,7 +2619,7 @@ def get_flag(row):
         if ach >= 70:
             return "Monitor"
 
-        return "Investigate"
+        return "Underperforming"
 
 performance["Risk Flag"] = (
     performance.apply(
@@ -2616,18 +2636,24 @@ def get_remarks(row):
 
     plant = str(row["Plant"]).upper()
 
-    if row["Risk Flag"] == "Outage":
-        return "Unit unavailable during analysis period."
+    if row["Risk Flag"] == "Unavailable":
+
+        return (
+            "Unit unavailable during the analysis period. "
+            "Performance assessment is not applicable."
+        )
 
     if row["Risk Flag"] == "OK":
+
         return (
-            "Plant achieved available capability "
-            "during peak hours."
+            "Unit achieved expected capability "
+            "during peak-demand periods."
         )
 
     if row["Risk Flag"] == "Monitor":
 
         if "MHP" in plant:
+
             return (
                 "Moderate hydro utilization. "
                 "Review water availability."
@@ -2637,20 +2663,20 @@ def get_remarks(row):
             "Below full capability during peak conditions."
         )
 
-    if row["Risk Flag"] == "Investigate":
+    if row["Risk Flag"] == "Underperforming":
 
         if "MHP" in plant:
+
             return (
-                "Low hydro output versus available "
-                "capacity. Check water resource or "
-                "operational constraints."
+                "Unit was available but did not achieve "
+                "expected hydro output during peak periods."
             )
 
         return (
-            "Available but did not achieve expected "
-            "capability during peak demand. Review "
-            "derating, maintenance, fuel supply, "
-            "or dispatch strategy."
+            "Unit was available but did not achieve "
+            "expected capability. Review derating, "
+            "maintenance history, fuel supply, and "
+            "dispatch restrictions."
         )
 
     return ""
@@ -2705,8 +2731,8 @@ with st.expander(
 color_map = {
     "OK": "green",
     "Monitor": "gold",
-    "Investigate": "red",
-    "Outage": "gray",
+    "Underperforming": "red",
+    "Unavailable": "gray",
     "No Data": "lightgray"
 }
 
@@ -2885,7 +2911,7 @@ def asset_flag(row):
         return "No Data"
 
     if avail <= 0:
-        return "Outage"
+        return "Unavailable"
 
     if realization >= 95:
         return "OK"
@@ -2893,7 +2919,7 @@ def asset_flag(row):
     if realization >= 75:
         return "Monitor"
 
-    return "Investigate"
+    return "Underperforming"
 
 asset_perf["Risk Flag"] = (
     asset_perf.apply(
@@ -2910,7 +2936,7 @@ def asset_remark(row):
 
     plant = str(row["Plant"]).upper()
 
-    if row["Risk Flag"] == "Outage":
+    if row["Risk Flag"] == "Unavailable":
         return (
             "No available capacity recorded."
         )
@@ -2984,8 +3010,8 @@ with st.expander(
 asset_color_map = {
     "OK": "green",
     "Monitor": "gold",
-    "Investigate": "red",
-    "Outage": "gray",
+    "Underperforming": "red",
+    "Unavailable": "gray",
     "No Data": "lightgray"
 }
 
@@ -3131,7 +3157,7 @@ else:
     )
 
     # -------------------------------------------------
-    # HOURS ABOVE 90% DEPENDABLE
+    # HOURS ABOVE 80% DEPENDABLE
     # -------------------------------------------------
 
     hourly_cap = (
@@ -3203,7 +3229,7 @@ else:
             return "No Data"
 
         if row["DependableMW"] <= 0:
-            return "Outage"
+            return "Unavailable"
 
         if row["SustainedCapability %"] >= 80:
             return "OK"
@@ -3211,7 +3237,8 @@ else:
         if row["SustainedCapability %"] >= 40:
             return "Monitor"
 
-        return "Investigate"
+        return "Underperforming"
+
 
     unit_perf["Risk Flag"] = (
         unit_perf.apply(
@@ -3236,19 +3263,19 @@ else:
                 "Moderate sustained capability. Performance should be monitored."
             )
 
-        if row["Risk Flag"] == "Investigate":
+        if row["Risk Flag"] == "Underperforming":
             return (
-                "Rarely sustains dependable capability. "
-                "Review outages, derating, maintenance, "
-                "fuel supply, or dispatch strategy."
+                "Unit was available but rarely sustained dependable capability. "
+                "Review outages, derating, maintenance, fuel supply, or dispatch strategy."
             )
 
-        if row["Risk Flag"] == "Outage":
+        if row["Risk Flag"] == "Unavailable":
             return (
-                "No dependable capacity available."
+                "Unit unavailable during the analysis period."
             )
 
         return "Missing data."
+
 
     unit_perf["Remarks"] = (
         unit_perf.apply(
@@ -3264,11 +3291,11 @@ else:
     )
 
     unit_perf = unit_perf.sort_values(
-        ["Plant","SustainedCapability %"],
-        ascending=[True,True]
+        ["Plant", "SustainedCapability %"],
+        ascending=[True, True]
     )
-
-        # -------------------------------------------------
+    
+    # -------------------------------------------------
     # TABLE
     # -------------------------------------------------
 
@@ -3304,8 +3331,8 @@ else:
     color_map = {
         "OK": "green",
         "Monitor": "gold",
-        "Investigate": "red",
-        "Outage": "gray",
+        "Underperforming": "red",
+        "Unavailable": "gray",
         "No Data": "lightgray"
     }
 
@@ -3343,8 +3370,7 @@ else:
     )
 
     fig_unit.update_layout(
-        title=
-            "Unit Sustained Capability Assessment",
+        title="Unit Sustained Capability Assessment",
         xaxis_title=
             "% of Operating Hours Above 80% of Dependable Capacity",
         yaxis_title="Plant | Unit",
