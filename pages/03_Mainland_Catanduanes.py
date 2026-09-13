@@ -3223,7 +3223,7 @@ else:
     # RISK FLAG
     # -------------------------------------------------
 
-def get_unit_flag(row):
+    def get_unit_flag(row):
 
     if pd.isna(row["DependableMW"]):
         return "No Data"
@@ -3239,8 +3239,7 @@ def get_unit_flag(row):
 
     return "Underperforming"
 
-
-unit_perf["Risk Flag"] = (
+    unit_perf["Risk Flag"] = (
     unit_perf.apply(
         get_unit_flag,
         axis=1
@@ -3251,7 +3250,7 @@ unit_perf["Risk Flag"] = (
     # REMARKS
     # -------------------------------------------------
 
-def unit_remark(row):
+    def unit_remark(row):
 
     if row["Risk Flag"] == "OK":
         return (
@@ -3277,20 +3276,20 @@ def unit_remark(row):
     return "Missing data."
 
 
-unit_perf["Remarks"] = (
+    unit_perf["Remarks"] = (
     unit_perf.apply(
         unit_remark,
         axis=1
     )
 )
 
-unit_perf["PlantUnit"] = (
+    unit_perf["PlantUnit"] = (
         unit_perf["Plant"]
         + " | "
         + unit_perf["Unit"].astype(str)
 )
 
-unit_perf = unit_perf.sort_values(
+    unit_perf = unit_perf.sort_values(
         ["Plant","SustainedCapability %"],
         ascending=[True,True]
 )
