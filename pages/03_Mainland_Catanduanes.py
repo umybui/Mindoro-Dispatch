@@ -3225,26 +3225,26 @@ else:
 
     def get_unit_flag(row):
 
-    if pd.isna(row["DependableMW"]):
-        return "No Data"
+        if pd.isna(row["DependableMW"]):
+            return "No Data"
 
-    if row["DependableMW"] <= 0:
-        return "Unavailable"
+        if row["DependableMW"] <= 0:
+            return "Unavailable"
 
-    if row["SustainedCapability %"] >= 80:
-        return "OK"
+        if row["SustainedCapability %"] >= 80:
+            return "OK"
 
-    if row["SustainedCapability %"] >= 40:
-        return "Monitor"
+        if row["SustainedCapability %"] >= 40:
+            return "Monitor"
 
-    return "Underperforming"
+        return "Underperforming"
 
     unit_perf["Risk Flag"] = (
-    unit_perf.apply(
-        get_unit_flag,
-        axis=1
+        unit_perf.apply(
+            get_unit_flag,
+            axis=1
+        )
     )
-)
 
     # -------------------------------------------------
     # REMARKS
