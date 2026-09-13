@@ -1643,22 +1643,44 @@ fig_pareto.add_trace(
     )
 )
 
-fig_pareto.update_layout(
-    title="Plant Contribution Pareto",
-    yaxis=dict(
-        title="Contribution %"
-    ),
-    yaxis2=dict(
-        title="Cumulative %",
-        overlaying="y",
-        side="right"
-    ),
-    height=600
+fig_segment_role = px.bar(
+    segment_generation,
+    x="Segment",
+    y="MW",
+    color="Plant",
+    barmode="stack",
+    title="Generation Contribution by Load Regime"
 )
 
-st.plotly_chart(
-    fig_pareto,
-    use_container_width=True
+fig_role = px.scatter(
+    role_df,
+    x="PeakContributionPct",
+    y="EnergyContributionPct",
+    size="DependableMW",
+    color="Plant",
+    text="Plant",
+    size_max=60
+)
+
+fig_role.update_traces(
+    textposition="top center"
+)
+
+fig_role.update_layout(
+    title="Plant Role Matrix",
+    xaxis_title="Peak Demand Contribution (%)",
+    yaxis_title="Annual Energy Contribution (%)",
+    height=650
+)
+
+fig_cf = go.Figure()
+
+fig_cf.add_trace(
+    go.Bar(
+        x=capacity_factor["CapacityFactor"],
+        y=capacity_factor["Plant"],
+        orientation="h"
+    )
 )
 
 with st.expander(
