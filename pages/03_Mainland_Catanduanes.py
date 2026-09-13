@@ -3225,19 +3225,19 @@ else:
 
     def get_unit_flag(row):
 
-        if pd.isna(row["DependableMW"]):
-            return "No Data"
+    if pd.isna(row["DependableMW"]):
+        return "No Data"
 
-        if row["DependableMW"] <= 0:
-            return "Outage"
+    if row["DependableMW"] <= 0:
+        return "Unavailable"
 
-        if row["SustainedCapability %"] >= 80:
-            return "OK"
+    if row["SustainedCapability %"] >= 80:
+        return "OK"
 
-        if row["SustainedCapability %"] >= 40:
-            return "Monitor"
+    if row["SustainedCapability %"] >= 40:
+        return "Monitor"
 
-        return "Investigate"
+    return "Underperforming"
 
     unit_perf["Risk Flag"] = (
         unit_perf.apply(
@@ -3252,29 +3252,28 @@ else:
 
     def unit_remark(row):
 
-        if row["Risk Flag"] == "OK":
-            return (
-                "Frequently sustains at least 80% of dependable capacity."
-            )
+    if row["Risk Flag"] == "OK":
+        return (
+            "Frequently sustains at least 80% of dependable capacity."
+        )
 
-        if row["Risk Flag"] == "Monitor":
-            return (
-                "Moderate sustained capability. Performance should be monitored."
-            )
+    if row["Risk Flag"] == "Monitor":
+        return (
+            "Moderate sustained capability. Performance should be monitored."
+        )
 
-        if row["Risk Flag"] == "Investigate":
-            return (
-                "Rarely sustains dependable capability. "
-                "Review outages, derating, maintenance, "
-                "fuel supply, or dispatch strategy."
-            )
+    if row["Risk Flag"] == "Underperforming":
+        return (
+            "Unit was available but rarely sustained dependable capability. "
+            "Review outages, derating, maintenance, fuel supply, or dispatch strategy."
+        )
 
-        if row["Risk Flag"] == "Outage":
-            return (
-                "No dependable capacity available."
-            )
+    if row["Risk Flag"] == "Unavailable":
+        return (
+            "Unit unavailable during the analysis period."
+        )
 
-        return "Missing data."
+    return "Missing data."
 
     unit_perf["Remarks"] = (
         unit_perf.apply(
