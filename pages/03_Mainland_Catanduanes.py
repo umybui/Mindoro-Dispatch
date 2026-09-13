@@ -2597,7 +2597,7 @@ def get_flag(row):
         return "No Data"
 
     if available <= 0:
-        return "Unavailable"
+        return "Underperforming"
 
     plant = str(row["Plant"]).upper()
 
@@ -2911,7 +2911,7 @@ def asset_flag(row):
         return "No Data"
 
     if avail <= 0:
-        return "Outage"
+        return "Investigate"
 
     if realization >= 95:
         return "OK"
@@ -3229,7 +3229,7 @@ else:
         return "No Data"
 
     if row["DependableMW"] <= 0:
-        return "Unavailable"
+        return "Underperforming"
 
     if row["SustainedCapability %"] >= 80:
         return "OK"
@@ -3239,12 +3239,12 @@ else:
 
     return "Underperforming"
 
-    unit_perf["Risk Flag"] = (
+unit_perf["Risk Flag"] = (
         unit_perf.apply(
             get_unit_flag,
             axis=1
         )
-    )
+)
 
     # -------------------------------------------------
     # REMARKS
@@ -3275,25 +3275,25 @@ else:
 
     return "Missing data."
 
-    unit_perf["Remarks"] = (
+unit_perf["Remarks"] = (
         unit_perf.apply(
             unit_remark,
             axis=1
         )
-    )
+)
 
-    unit_perf["PlantUnit"] = (
+unit_perf["PlantUnit"] = (
         unit_perf["Plant"]
         + " | "
         + unit_perf["Unit"].astype(str)
-    )
+)
 
-    unit_perf = unit_perf.sort_values(
+unit_perf = unit_perf.sort_values(
         ["Plant","SustainedCapability %"],
         ascending=[True,True]
-    )
+)
 
-        # -------------------------------------------------
+    # -------------------------------------------------
     # TABLE
     # -------------------------------------------------
 
