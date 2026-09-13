@@ -2919,7 +2919,7 @@ def asset_flag(row):
     if realization >= 75:
         return "Monitor"
 
-    return "Investigate"
+    return "Underperforming"
 
 asset_perf["Risk Flag"] = (
     asset_perf.apply(
@@ -2936,7 +2936,7 @@ def asset_remark(row):
 
     plant = str(row["Plant"]).upper()
 
-    if row["Risk Flag"] == "Outage":
+    if row["Risk Flag"] == "Unavailable":
         return (
             "No available capacity recorded."
         )
