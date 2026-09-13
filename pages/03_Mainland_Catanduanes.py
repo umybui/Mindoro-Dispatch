@@ -1408,6 +1408,80 @@ r5.metric(
 
 st.subheader("Shortage Event Analysis")
 
+monthly_shortage = (
+    gap_df.assign(
+        MonthDate=gap_df["Datetime"].dt.to_period("M").dt.to_timestamp(),
+        MonthLabel=gap_df["Datetime"].dt.strftime("%b %Y")
+    )
+    .groupby(
+        ["MonthDate", "MonthLabel"],
+        as_index=False
+    )
+    .agg(
+        UnservedEnergy=(
+            "ShortageMW",
+            lambda x: x.clip(lower=0).sum()
+        ),
+        ShortageHours=(
+            "ShortageMW",
+            lambda x: (
+                x >= SHORTAGE_THRESHOLD
+            ).sum()
+        ),
+        MaxShortageMW=(
+            "ShortageMW",
+            "max"
+        )
+    )
+    .sort_values("MonthDate")
+)
+
+import plotly.express as px
+
+fig_monthly_shortage = px.scatter(
+    monthly_shortage,
+    x="MonthLabel",
+    y="UnservedEnergy",
+    size="ShortageHours",
+    color="MaxShortageMW",
+    text="MonthLabel",
+    color_continuous_scale="Reds",
+    size_max=60
+)
+
+fig_monthly_shortage.update_traces(
+    textposition="top center"
+)
+
+fig_monthly_shortage.update_layout(
+    title="Monthly Reliability Impact Overview",
+    xaxis_title="Month",
+    yaxis_title="Unserved Energy (MWh)",
+    height=600
+)
+
+st.plotly_chart(
+    fig_monthly_shortage,
+    use_container_width=True
+)
+
+worst_month = (
+    monthly_shortage.sort_values(
+        "UnservedEnergy",
+        ascending=False
+    ).iloc[0]
+)
+
+st.info(
+    f"""
+Worst Reliability Month: {worst_month['MonthLabel']}
+
+• Unserved Energy: {worst_month['UnservedEnergy']:.2f} MWh
+• Shortage Hours: {worst_month['ShortageHours']}
+• Maximum Shortage: {worst_month['MaxShortageMW']:.2f} MW
+"""
+)
+
 gap_df["ShortageFlag"] = (
     gap_df["ShortageMW"]
     >= SHORTAGE_THRESHOLD
