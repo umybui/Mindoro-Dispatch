@@ -2597,7 +2597,7 @@ def get_flag(row):
         return "No Data"
 
     if available <= 0:
-        return "Underperforming"
+        return "Unavailable"
 
     plant = str(row["Plant"]).upper()
 
@@ -2911,7 +2911,7 @@ def asset_flag(row):
         return "No Data"
 
     if avail <= 0:
-        return "Investigate"
+        return "Unavailable"
 
     if realization >= 95:
         return "OK"
@@ -3010,8 +3010,8 @@ with st.expander(
 asset_color_map = {
     "OK": "green",
     "Monitor": "gold",
-    "Investigate": "red",
-    "Outage": "gray",
+    "Underperforming": "red",
+    "Unavailable": "gray",
     "No Data": "lightgray"
 }
 
@@ -3223,13 +3223,13 @@ else:
     # RISK FLAG
     # -------------------------------------------------
 
-    def get_unit_flag(row):
+def get_unit_flag(row):
 
     if pd.isna(row["DependableMW"]):
         return "No Data"
 
     if row["DependableMW"] <= 0:
-        return "Underperforming"
+        return "Unavailable"
 
     if row["SustainedCapability %"] >= 80:
         return "OK"
@@ -3239,18 +3239,19 @@ else:
 
     return "Underperforming"
 
+
 unit_perf["Risk Flag"] = (
-        unit_perf.apply(
-            get_unit_flag,
-            axis=1
-        )
+    unit_perf.apply(
+        get_unit_flag,
+        axis=1
+    )
 )
 
     # -------------------------------------------------
     # REMARKS
     # -------------------------------------------------
 
-    def unit_remark(row):
+def unit_remark(row):
 
     if row["Risk Flag"] == "OK":
         return (
@@ -3275,11 +3276,12 @@ unit_perf["Risk Flag"] = (
 
     return "Missing data."
 
+
 unit_perf["Remarks"] = (
-        unit_perf.apply(
-            unit_remark,
-            axis=1
-        )
+    unit_perf.apply(
+        unit_remark,
+        axis=1
+    )
 )
 
 unit_perf["PlantUnit"] = (
