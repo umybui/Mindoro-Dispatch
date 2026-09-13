@@ -1723,6 +1723,238 @@ st.plotly_chart(
     use_container_width=True
 )
 
+# =====================================================
+# OPTION 2 - PLANT ROLE MATRIX
+# =====================================================
+
+st.subheader(
+    "Plant Role Matrix"
+)
+
+st.markdown(
+    """
+    **Story:** Identifies whether a plant functions primarily
+    as a baseload asset, peaking asset, or critical system asset.
+
+    • Higher = larger annual energy contribution
+
+    • Further right = larger contribution during high-demand periods
+
+    • Larger bubble = larger average generating capability
+    """
+)
+
+peak_threshold = peak_demand * 0.90
+
+peak_hours = total_demand.loc[
+    total_demand["Value"] >= peak_threshold,
+    "Datetime"
+]
+
+# Annual energy contribution
+
+energy_share = (
+    generation
+    .groupby("Plant", as_index=False)
+    .agg(
+        EnergyMWh=("Value", "sum"),
+        AvgMW=("Value", "mean")
+    )
+)
+
+energy_share["EnergyContributionPct"] = (
+    energy_share["EnergyMWh"]
+    /
+    energy_share["EnergyMWh"].sum()
+    * 100
+)
+
+# Peak-period contribution
+
+peak_gen = generation[
+    generation["Datetime"].isin(peak_hours)
+]
+
+peak_share = (
+    peak_gen
+    .groupby("Plant", as_index=False)
+    .agg(
+        PeakEnergyMWh=("Value", "sum")
+    )
+)
+
+peak_share["PeakContributionPct"] = (
+    peak_share["PeakEnergyMWh"]
+    /
+    peak_share["PeakEnergyMWh"].sum()
+    * 100
+)
+
+role_df = energy_share.merge(
+    peak_share[
+        [
+            "Plant",
+            "PeakContributionPct"
+        ]
+    ],
+    on="Plant",
+    how="left"
+)
+
+role_df["PeakContributionPct"] = (
+    role_df["PeakContributionPct"]
+    .fillna(0)
+)
+
+fig_role = px.scatter(
+    role_df,
+    x="PeakContributionPct",
+    y="EnergyContributionPct",
+    size="AvgMW",
+    color="Plant",
+    text="Plant",
+    size_max=70
+)
+
+fig_role.update_traces(
+    textposition="top center"
+)
+
+fig_role.update_layout(
+    title="Plant Role Matrix",
+    xaxis_title="Peak Demand Contribution (%)",
+    yaxis_title="Annual Energy Contribution (%)",
+    height=700
+)
+
+st.plotly_chart(
+    fig_role,
+    use_container_width=True
+)
+
+# =====================================================
+# OPTION 3 - CAPACITY FACTOR
+# =====================================================
+
+st.subheader(
+    "Plant Capacity Factor"
+)
+
+st.markdown(
+    """
+    **Story:** Measures how intensively each generating
+    plant was utilized during the selected period.
+
+    Capacity Factor (%) =
+    Energy Generated /
+    (Dependable Capacity × Total Hours)
+
+    • High values indicate heavily utilized assets.
+
+    • Low values indicate peaking, reserve,
+      standby, or underutilized resources.
+    """
+)
+
+# Dependable Capacity by Plant
+
+capacity_tbl = (
+    capacity_data[
+        capacity_data["Attribute"]
+        .str.contains(
+            "GUARANTEED DEPENDABLE",
+            na=False
+        )
+    ]
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        DependableMW=("Value", "sum")
+    )
+)
+
+# Energy Generated
+
+capacity_factor = (
+    generation
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        EnergyMWh=("Value", "sum")
+    )
+)
+
+capacity_factor = capacity_factor.merge(
+    capacity_tbl,
+    on="Plant",
+    how="left"
+)
+
+# Number of hours in filtered dataset
+
+dataset_hours = (
+    generation["Datetime"]
+    .nunique()
+)
+
+capacity_factor["CapacityFactor"] = (
+    capacity_factor["EnergyMWh"]
+    /
+    (
+        capacity_factor["DependableMW"]
+        * dataset_hours
+    )
+    * 100
+)
+
+capacity_factor = capacity_factor.sort_values(
+    "CapacityFactor",
+    ascending=True
+)
+
+fig_cf = go.Figure()
+
+fig_cf.add_trace(
+    go.Bar(
+        y=capacity_factor["Plant"],
+        x=capacity_factor["CapacityFactor"],
+        orientation="h",
+        text=capacity_factor[
+            "CapacityFactor"
+        ].round(1),
+        texttemplate="%{text:.1f}%",
+        textposition="outside"
+    )
+)
+
+fig_cf.update_layout(
+    title="Plant Capacity Factor",
+    xaxis_title="Capacity Factor (%)",
+    yaxis_title="Plant",
+    height=600,
+    yaxis=dict(
+        categoryorder="total ascending"
+    )
+)
+
+st.plotly_chart(
+    fig_cf,
+    use_container_width=True
+)
+
+with st.expander(
+    "View Capacity Factor Data",
+    expanded=False
+):
+    st.dataframe(
+        capacity_factor.round(2),
+        use_container_width=True,
+        hide_index=True
+    )
 
 with st.expander(
     "View Plant Contribution Data",
