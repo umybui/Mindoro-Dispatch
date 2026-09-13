@@ -1836,6 +1836,29 @@ st.plotly_chart(
 )
 
 # -----------------------------------------------------
+# CAPACITY DATA
+# -----------------------------------------------------
+
+capacity_data = df[
+    df["Attribute"]
+    .astype(str)
+    .str.upper()
+    .isin(
+        [
+            "INSTALLED CAPACITY (KW)",
+            "GUARANTEED DEPENDABLE CAPACITY (KW)",
+            "AVAILABLE CAPACITY (KW)"
+        ]
+    )
+].copy()
+
+capacity_data["Attribute"] = (
+    capacity_data["Attribute"]
+    .astype(str)
+    .str.upper()
+)
+
+# -----------------------------------------------------
 # CAPACITY SCENARIO
 # -----------------------------------------------------
 
@@ -1846,13 +1869,10 @@ st.sidebar.subheader(
 retired_plants = st.sidebar.multiselect(
     "Scenario: Retired / Unavailable Plants",
     options=sorted(
-    capacity_data.get(
-        "Plant",
-        pd.Series(dtype=str)
-    )
-    .dropna()
-    .unique()
-),
+        capacity_data["Plant"]
+        .dropna()
+        .unique()
+    ),
     default=[]
 )
 
@@ -1920,7 +1940,7 @@ removed_capacity_tbl = (
         RemovedMW=("DependableMW", "sum")
     )
     .sort_values(
-        "RemoveMW",
+        "RemovedMW",
         ascending=False
     )
 )
