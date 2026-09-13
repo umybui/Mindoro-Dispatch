@@ -1728,6 +1728,21 @@ fig_role.update_layout(
     height=700
 )
 
+median_energy = role_df["EnergyContributionPct"].median()
+median_peak = role_df["PeakContributionPct"].median()
+
+fig_role.add_hline(
+    y=median_energy,
+    line_dash="dash",
+    line_color="gray"
+)
+
+fig_role.add_vline(
+    x=median_peak,
+    line_dash="dash",
+    line_color="gray"
+)
+
 st.plotly_chart(
     fig_role,
     use_container_width=True
@@ -1836,8 +1851,19 @@ projected_peak = (
 )
 
 available_capacity = (
-    total_generation["TotalGeneration"]
+    capacity_data[
+        capacity_data["Attribute"]
+        .astype(str)
+        .str.upper()
+        .eq(
+            "GUARANTEED DEPENDABLE CAPACITY (KW)"
+        )
+    ]
+    .groupby(
+        ["Plant", "Unit"]
+    )["Value"]
     .max()
+    .sum()
 )
 
 capacity_margin = (
