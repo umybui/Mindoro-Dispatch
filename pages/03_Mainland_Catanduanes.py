@@ -1909,6 +1909,34 @@ st.subheader(
     f"Demand Growth & Capacity Outlook (@ {growth_rate:.1f}% Annual Growth)"
 )
 
+cap_check = (
+    capacity_data[
+        capacity_data["Attribute"]
+        .astype(str)
+        .str.upper()
+        .eq(
+            "GUARANTEED DEPENDABLE CAPACITY (KW)"
+        )
+    ]
+    .groupby(
+        ["Plant", "Unit"]
+    )["Value"]
+    .max()
+    .reset_index()
+)
+
+st.dataframe(
+    cap_check.sort_values(
+        ["Plant", "Unit"]
+    ),
+    use_container_width=True
+)
+
+st.write(
+    "TOTAL:",
+    cap_check["Value"].sum()
+)
+
 f1, f2, f3, f4 = st.columns(4)
 
 with f1:
