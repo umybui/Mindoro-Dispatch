@@ -2590,14 +2590,14 @@ performance.loc[
 
 def get_flag(row):
 
-    avail = row["DependableMW"]
+    available = row["AvailableMW"]
     ach = row["Peak Support %"]
 
-    if pd.isna(avail):
+    if pd.isna(available):
         return "No Data"
 
-    if avail <= 0:
-        return "Outage"
+    if available <= 0:
+        return "Unavailable"
 
     plant = str(row["Plant"]).upper()
 
@@ -2609,7 +2609,7 @@ def get_flag(row):
         if ach >= 40:
             return "Monitor"
 
-        return "Investigate"
+        return "Underperforming"
 
     else:
 
@@ -2619,7 +2619,7 @@ def get_flag(row):
         if ach >= 70:
             return "Monitor"
 
-        return "Investigate"
+        return "Underperforming"
 
 performance["Risk Flag"] = (
     performance.apply(
@@ -2636,18 +2636,24 @@ def get_remarks(row):
 
     plant = str(row["Plant"]).upper()
 
-    if row["Risk Flag"] == "Outage":
-        return "Unit unavailable during analysis period."
+    if row["Risk Flag"] == "Unavailable":
+
+        return (
+            "Unit unavailable during the analysis period. "
+            "Performance assessment is not applicable."
+        )
 
     if row["Risk Flag"] == "OK":
+
         return (
-            "Plant achieved available capability "
-            "during peak hours."
+            "Unit achieved expected capability "
+            "during peak-demand periods."
         )
 
     if row["Risk Flag"] == "Monitor":
 
         if "MHP" in plant:
+
             return (
                 "Moderate hydro utilization. "
                 "Review water availability."
@@ -2657,20 +2663,20 @@ def get_remarks(row):
             "Below full capability during peak conditions."
         )
 
-    if row["Risk Flag"] == "Investigate":
+    if row["Risk Flag"] == "Underperforming":
 
         if "MHP" in plant:
+
             return (
-                "Low hydro output versus available "
-                "capacity. Check water resource or "
-                "operational constraints."
+                "Unit was available but did not achieve "
+                "expected hydro output during peak periods."
             )
 
         return (
-            "Available but did not achieve expected "
-            "capability during peak demand. Review "
-            "derating, maintenance, fuel supply, "
-            "or dispatch strategy."
+            "Unit was available but did not achieve "
+            "expected capability. Review derating, "
+            "maintenance history, fuel supply, and "
+            "dispatch restrictions."
         )
 
     return ""
@@ -2725,8 +2731,8 @@ with st.expander(
 color_map = {
     "OK": "green",
     "Monitor": "gold",
-    "Investigate": "red",
-    "Outage": "gray",
+    "Underperforming": "red",
+    "Unavailable": "gray",
     "No Data": "lightgray"
 }
 
@@ -3322,11 +3328,11 @@ else:
     # -------------------------------------------------
 
     color_map = {
-        "OK": "green",
-        "Monitor": "gold",
-        "Investigate": "red",
-        "Outage": "gray",
-        "No Data": "lightgray"
+    "OK": "green",
+    "Monitor": "gold",
+    "Underperforming": "red",
+    "Unavailable": "gray",
+    "No Data": "lightgray"
     }
 
     fig_unit = go.Figure()
