@@ -1323,7 +1323,7 @@ fig_ldc.update_layout(
         f"Load Duration Curve "
         f"({segment_count} Segments)"
     ),
-    xaxis_title=
+    xaxis_title=(
         "Percent of Time Exceeded (%)",
     yaxis_title="Demand (MW)",
     height=600,
