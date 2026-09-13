@@ -1643,6 +1643,72 @@ fig_pareto.add_trace(
     )
 )
 
+# ----------------------------------
+# Assign Demand Segment to Each Hour
+# ----------------------------------
+
+ldc_hours = (
+    total_demand
+    .sort_values("Value", ascending=False)
+    .reset_index(drop=True)
+)
+
+ldc_hours["Segment"] = None
+
+scale_factor = len(ldc_hours) / len(ldc_seg)
+
+for i, (start_idx, end_idx) in enumerate(boundaries):
+
+    actual_start = int(start_idx * scale_factor)
+    actual_end = int(end_idx * scale_factor)
+
+    segment_name = get_segment_name(
+        i,
+        len(boundaries)
+    )
+
+    ldc_hours.loc[
+        actual_start:actual_end - 1,
+        "Segment"
+    ] = segment_name
+
+hour_segments = ldc_hours[
+    ["Datetime", "Segment"]
+]
+
+generation_segmented = generation.merge(
+    hour_segments,
+    on="Datetime",
+    how="inner"
+)
+
+segment_generation = (
+    generation_segmented
+    .groupby(
+        ["Segment", "Plant"],
+        as_index=False
+    )
+    .agg(
+        MW=("Value", "mean")
+    )
+)
+
+segment_order = [
+    "Baseload",
+    "Mid-Merit 2",
+    "Mid-Merit 1",
+    "Peaking"
+]
+
+segment_generation["Segment"] = pd.Categorical(
+    segment_generation["Segment"],
+    categories=[
+        s for s in segment_order
+        if s in segment_generation["Segment"].unique()
+    ],
+    ordered=True
+)
+
 fig_segment_role = px.bar(
     segment_generation,
     x="Segment",
@@ -1652,36 +1718,11 @@ fig_segment_role = px.bar(
     title="Generation Contribution by Load Regime"
 )
 
-fig_role = px.scatter(
-    role_df,
-    x="PeakContributionPct",
-    y="EnergyContributionPct",
-    size="DependableMW",
-    color="Plant",
-    text="Plant",
-    size_max=60
+st.plotly_chart(
+    fig_segment_role,
+    use_container_width=True
 )
 
-fig_role.update_traces(
-    textposition="top center"
-)
-
-fig_role.update_layout(
-    title="Plant Role Matrix",
-    xaxis_title="Peak Demand Contribution (%)",
-    yaxis_title="Annual Energy Contribution (%)",
-    height=650
-)
-
-fig_cf = go.Figure()
-
-fig_cf.add_trace(
-    go.Bar(
-        x=capacity_factor["CapacityFactor"],
-        y=capacity_factor["Plant"],
-        orientation="h"
-    )
-)
 
 with st.expander(
     "View Plant Contribution Data",
