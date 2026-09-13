@@ -1139,6 +1139,10 @@ and generation portfolio analysis.
         hide_index=True
     )
 
+# ----------------------------------
+# Load Duration Curve
+# ----------------------------------
+
 fig_ldc = go.Figure()
 
 fig_ldc.add_trace(
@@ -1165,23 +1169,39 @@ segment_colors = [
     "brown"
 ]
 
+
+def get_segment_name(i, total_segments):
+    if total_segments == 1:
+        return "Load"
+
+    if i == 0:
+        return "Peaking"
+
+    if i == total_segments - 1:
+        return "Baseload"
+
+    if total_segments == 3:
+        return "Mid-Merit"
+
+    return f"Mid-Merit {i}"
+
+
 scale_factor = len(ldc) / len(ldc_seg)
+
+segment_summary = []
 
 for i, (start_idx, end_idx) in enumerate(boundaries):
 
-    actual_start = int(
-        start_idx * scale_factor
-    )
+    actual_start = int(start_idx * scale_factor)
+    actual_end = int(end_idx * scale_factor)
 
-    actual_end = int(
-        end_idx * scale_factor
-    )
+    segment_data = ldc.iloc[actual_start:actual_end]
 
-    segment_data = ldc.iloc[
-        actual_start:actual_end
-    ]
+    if len(segment_data) == 0:
+        continue
 
-    segment_mean = segment_data.mean()
+    segment_max = segment_data.max()
+    segment_min = segment_data.min()
 
     start_pct = (
         actual_start
@@ -1195,44 +1215,78 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
         * 100
     )
 
-    # Region shading
+    duration_pct = end_pct - start_pct
 
+    segment_name = get_segment_name(
+        i,
+        len(boundaries)
+    )
+
+    # Segment shading
     fig_ldc.add_vrect(
         x0=start_pct,
         x1=end_pct,
-        fillcolor=segment_colors[i],
-        opacity=0.08,
+        fillcolor=segment_colors[
+            i % len(segment_colors)
+        ],
+        opacity=0.12,
         line_width=0,
-        annotation_text=f"S{i+1}"
     )
 
+    # Boundary line
     fig_ldc.add_vline(
         x=end_pct,
         line_dash="dot",
         line_color="black"
     )
 
-    # Piecewise mean line
+    # Segment annotation
+    fig_ldc.add_annotation(
+        x=(start_pct + end_pct) / 2,
+        y=segment_max,
+        text=(
+            f"<b>{segment_name}</b><br>"
+            f"{segment_min:.1f} - "
+            f"{segment_max:.1f} MW<br>"
+            f"{duration_pct:.1f}%"
+        ),
+        showarrow=False,
+        bgcolor="white",
+        bordercolor="black",
+        borderwidth=1,
+        opacity=0.9
+    )
 
+    # Segment transition marker
     fig_ldc.add_trace(
         go.Scatter(
-            x=[
-                start_pct,
-                end_pct
-            ],
-            y=[
-                segment_mean,
-                segment_mean
-            ],
-            mode="lines",
-            line=dict(
-                color=segment_colors[i],
-                width=6
+            x=[start_pct],
+            y=[segment_max],
+            mode="markers",
+            marker=dict(
+                size=10,
+                color=segment_colors[
+                    i % len(segment_colors)
+                ]
             ),
-            name=f"S{i+1} Mean"
+            name=segment_name,
+            hovertemplate=
+                f"{segment_name}<br>"
+                f"Max MW: {segment_max:.2f}<br>"
+                f"Duration: {duration_pct:.2f}%"
+                "<extra></extra>"
         )
     )
 
+    segment_summary.append({
+        "Segment": segment_name,
+        "Min MW": round(segment_min, 2),
+        "Max MW": round(segment_max, 2),
+        "Duration %": round(duration_pct, 2)
+    })
+
+
+# Average load
 fig_ldc.add_hline(
     y=average_load,
     line_dash="dash",
@@ -1240,17 +1294,60 @@ fig_ldc.add_hline(
         f"Average Load ({average_load:,.2f} MW)"
 )
 
+# Peak demand marker
+fig_ldc.add_annotation(
+    x=0,
+    y=ldc.max(),
+    text=(
+        f"Peak Demand<br>"
+        f"{ldc.max():,.2f} MW"
+    ),
+    showarrow=True,
+    arrowhead=2
+)
+
+# Minimum demand marker
+fig_ldc.add_annotation(
+    x=100,
+    y=ldc.min(),
+    text=(
+        f"Minimum Demand<br>"
+        f"{ldc.min():,.2f} MW"
+    ),
+    showarrow=True,
+    arrowhead=2
+)
+
 fig_ldc.update_layout(
-    title="Load Duration Curve",
-    xaxis_title="Percent of Time Exceeded (%)",
+    title=(
+        f"Load Duration Curve "
+        f"({segment_count} Segments)"
+    ),
+    xaxis_title=
+        "Percent of Time Exceeded (%)",
     yaxis_title="Demand (MW)",
-    height=500,
-    hovermode="x unified"
+    height=600,
+    hovermode="x unified",
+    legend_title="Segment"
 )
 
 st.plotly_chart(
     fig_ldc,
     use_container_width=True
+)
+
+# ----------------------------------
+# Segment Summary Table
+# ----------------------------------
+
+st.markdown(
+    "##### Segment Summary"
+)
+
+st.dataframe(
+    pd.DataFrame(segment_summary),
+    use_container_width=True,
+    hide_index=True
 )
 
 st.subheader("Reserve Margin Analysis")
