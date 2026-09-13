@@ -1840,31 +1840,14 @@ st.subheader(
     "Plant Capacity Factor"
 )
 
-st.markdown(
-    """
-    **Story:** Measures how intensively each generating
-    plant was utilized during the selected period.
-
-    Capacity Factor (%) =
-    Energy Generated /
-    (Dependable Capacity × Total Hours)
-
-    • High values indicate heavily utilized assets.
-
-    • Low values indicate peaking, reserve,
-      standby, or underutilized resources.
-    """
-)
-
-# Dependable Capacity by Plant
+# Build capacity table directly from df
 
 capacity_tbl = (
-    capacity_data[
-        capacity_data["Attribute"]
-        .str.contains(
-            "GUARANTEED DEPENDABLE",
-            na=False
-        )
+    df[
+        df["Attribute"]
+        .astype(str)
+        .str.upper()
+        .eq("GUARANTEED DEPENDABLE CAPACITY (KW)")
     ]
     .groupby(
         "Plant",
@@ -1874,8 +1857,6 @@ capacity_tbl = (
         DependableMW=("Value", "sum")
     )
 )
-
-# Energy Generated
 
 capacity_factor = (
     generation
@@ -1894,8 +1875,6 @@ capacity_factor = capacity_factor.merge(
     how="left"
 )
 
-# Number of hours in filtered dataset
-
 dataset_hours = (
     generation["Datetime"]
     .nunique()
@@ -1911,9 +1890,12 @@ capacity_factor["CapacityFactor"] = (
     * 100
 )
 
+capacity_factor = capacity_factor[
+    capacity_factor["DependableMW"] > 0
+]
+
 capacity_factor = capacity_factor.sort_values(
-    "CapacityFactor",
-    ascending=True
+    "CapacityFactor"
 )
 
 fig_cf = go.Figure()
