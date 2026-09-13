@@ -1835,6 +1835,29 @@ st.plotly_chart(
     use_container_width=True
 )
 
+# -----------------------------------------------------
+# CAPACITY DATA
+# -----------------------------------------------------
+
+capacity_data = df[
+    df["Attribute"]
+    .astype(str)
+    .str.upper()
+    .isin(
+        [
+            "INSTALLED CAPACITY (KW)",
+            "GUARANTEED DEPENDABLE CAPACITY (KW)",
+            "AVAILABLE CAPACITY (KW)"
+        ]
+    )
+].copy()
+
+capacity_data["Attribute"] = (
+    capacity_data["Attribute"]
+    .astype(str)
+    .str.upper()
+)
+
 growth_rate = st.sidebar.slider(
     "Annual Demand Growth (%)",
     0.0,
@@ -2349,29 +2372,6 @@ fig_mix.update_layout(
 st.plotly_chart(
     fig_mix,
     use_container_width=True
-)
-
-# -----------------------------------------------------
-# CAPACITY DATA
-# -----------------------------------------------------
-
-capacity_data = df[
-    df["Attribute"]
-    .astype(str)
-    .str.upper()
-    .isin(
-        [
-            "INSTALLED CAPACITY (KW)",
-            "GUARANTEED DEPENDABLE CAPACITY (KW)",
-            "AVAILABLE CAPACITY (KW)"
-        ]
-    )
-].copy()
-
-capacity_data["Attribute"] = (
-    capacity_data["Attribute"]
-    .astype(str)
-    .str.upper()
 )
 
 available_capacity_tbl = (
