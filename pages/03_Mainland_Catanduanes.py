@@ -1836,26 +1836,21 @@ st.plotly_chart(
 )
 
 # -----------------------------------------------------
-# CAPACITY DATA
+# CAPACITY SCENARIO
 # -----------------------------------------------------
 
-capacity_data = df[
-    df["Attribute"]
-    .astype(str)
-    .str.upper()
-    .isin(
-        [
-            "INSTALLED CAPACITY (KW)",
-            "GUARANTEED DEPENDABLE CAPACITY (KW)",
-            "AVAILABLE CAPACITY (KW)"
-        ]
-    )
-].copy()
+st.sidebar.subheader(
+    "Capacity Scenario"
+)
 
-capacity_data["Attribute"] = (
-    capacity_data["Attribute"]
-    .astype(str)
-    .str.upper()
+retired_plants = st.sidebar.multiselect(
+    "Scenario: Retired / Unavailable Plants",
+    options=sorted(
+        capacity_data["Plant"]
+        .dropna()
+        .unique()
+    ),
+    default=[]
 )
 
 growth_rate = st.sidebar.slider(
@@ -1873,20 +1868,54 @@ projected_peak = (
     * (1 + growth_rate / 100) ** planning_horizon
 )
 
-available_capacity = (
+cap_check = (
     capacity_data[
         capacity_data["Attribute"]
-        .astype(str)
-        .str.upper()
         .eq(
             "GUARANTEED DEPENDABLE CAPACITY (KW)"
         )
     ]
     .groupby(
-        ["Plant", "Unit"]
-    )["Value"]
-    .max()
+        ["Plant", "Unit"],
+        as_index=False
+    )
+    .agg(
+        DependableMW=("Value", "max")
+    )
+)
+
+cap_check["Retired"] = (
+    cap_check["Plant"]
+    .isin(retired_plants)
+)
+
+available_capacity = (
+    cap_check.loc[
+        ~cap_check["Retired"],
+        "DependableMW"
+    ]
     .sum()
+)
+
+removed_capacity = (
+    cap_check.loc[
+        cap_check["Retired"],
+        "DependableMW"
+    ]
+    .sum()
+)
+
+removed_capacity_tbl = (
+    cap_check[
+        cap_check["Retired"]
+    ]
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        RemovedMW=("DependableMW", "sum")
+    )
 )
 
 capacity_margin = (
@@ -1905,39 +1934,38 @@ required_new_capacity = max(
     0
 )
 
+if reserve_margin_pct >= 20:
+    planning_risk = "Low Risk"
+
+elif reserve_margin_pct >= 10:
+    planning_risk = "Moderate Risk"
+
+elif reserve_margin_pct >= 0:
+    planning_risk = "High Risk"
+
+else:
+    planning_risk = "Capacity Deficit"
+
+# -----------------------------------------------------
+# OUTLOOK KPIs
+# -----------------------------------------------------
+
+scenario_text = (
+    ", ".join(retired_plants)
+    if len(retired_plants) > 0
+    else "Base Case"
+)
+
 st.subheader(
-    f"Demand Growth & Capacity Outlook (@ {growth_rate:.1f}% Annual Growth)"
+    f"Demand Growth & Capacity Outlook "
+    f"(@ {growth_rate:.1f}% Annual Growth)"
 )
 
-cap_check = (
-    capacity_data[
-        capacity_data["Attribute"]
-        .astype(str)
-        .str.upper()
-        .eq(
-            "GUARANTEED DEPENDABLE CAPACITY (KW)"
-        )
-    ]
-    .groupby(
-        ["Plant", "Unit"]
-    )["Value"]
-    .max()
-    .reset_index()
+st.caption(
+    f"Scenario: {scenario_text}"
 )
 
-st.dataframe(
-    cap_check.sort_values(
-        ["Plant", "Unit"]
-    ),
-    use_container_width=True
-)
-
-st.write(
-    "TOTAL:",
-    cap_check["Value"].sum()
-)
-
-f1, f2, f3, f4 = st.columns(4)
+f1, f2, f3, f4, f5 = st.columns(5)
 
 with f1:
     st.metric(
@@ -1947,7 +1975,7 @@ with f1:
 
 with f2:
     st.metric(
-        "Projected Peak Demand (10-Year)",
+        "Projected Peak Demand",
         f"{projected_peak:,.2f} MW"
     )
 
@@ -1959,21 +1987,96 @@ with f3:
 
 with f4:
     st.metric(
+        "Removed Capacity",
+        f"{removed_capacity:,.2f} MW"
+    )
+
+with f5:
+    st.metric(
         "Reserve Margin",
         f"{reserve_margin_pct:.1f}%"
     )
 
 st.metric(
-    "Required New Capacity",
+    "Additional Capacity Needed",
     f"{required_new_capacity:,.2f} MW"
 )
 
-if reserve_margin_pct >= 15:
-    st.success("System capacity appears adequate.")
-elif reserve_margin_pct >= 0:
-    st.warning("System has limited reserve margin.")
+# -----------------------------------------------------
+# INTERPRETATION
+# -----------------------------------------------------
+
+if planning_risk == "Low Risk":
+
+    st.success(
+        "Low Risk: Capacity remains sufficient under the selected scenario."
+    )
+
+elif planning_risk == "Moderate Risk":
+
+    st.info(
+        "Moderate Risk: Capacity remains adequate but planning reserves are reduced."
+    )
+
+elif planning_risk == "High Risk":
+
+    st.warning(
+        "High Risk: Limited planning reserve remains under the selected scenario."
+    )
+
 else:
-    st.error("Projected demand exceeds available capacity.")
+
+    st.error(
+        "Capacity Deficit: Additional capacity is required."
+    )
+
+# -----------------------------------------------------
+# CROSS-CHECK TABLE
+# -----------------------------------------------------
+
+with st.expander(
+    "View Dependable Capacity Assumptions",
+    expanded=False
+):
+
+    st.dataframe(
+        cap_check.sort_values(
+            ["Plant", "Unit"]
+        ),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    if len(removed_capacity_tbl) > 0:
+
+        st.markdown(
+            "##### Removed Plants"
+        )
+
+        st.dataframe(
+            removed_capacity_tbl,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    st.write(
+        f"Total Dependable Capacity: "
+        f"{cap_check['DependableMW'].sum():.2f} MW"
+    )
+
+    st.write(
+        f"Remaining Capacity: "
+        f"{available_capacity:.2f} MW"
+    )
+
+    st.write(
+        f"Removed Capacity: "
+        f"{removed_capacity:.2f} MW"
+    )
+
+# -----------------------------------------------------
+# 10-YEAR OUTLOOK TABLE
+# -----------------------------------------------------
 
 projection_rows = []
 
@@ -1990,19 +2093,20 @@ for yr in range(0, 11):
     )
 
     projection_rows.append({
+
         "Year Ahead": yr,
-        "Projected Peak MW": round(
-            projected,
-            2
-        ),
-        "Capacity Margin MW": round(
-            reserve,
-            2
-        ),
-        "Additional Capacity Needed MW": round(
-            max(-reserve, 0),
-            2
-        )
+
+        "Projected Peak MW":
+            round(projected, 2),
+
+        "Capacity Margin MW":
+            round(reserve, 2),
+
+        "Additional Capacity Needed MW":
+            round(
+                max(-reserve, 0),
+                2
+            )
     })
 
 projection_df = pd.DataFrame(
