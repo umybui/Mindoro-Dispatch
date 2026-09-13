@@ -1277,12 +1277,11 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
     )
 
     segment_summary.append({
-        "Segment": segment_name,
-        "Min MW": round(segment_min, 2),
-        "Max MW": round(segment_max, 2),
-        "Duration %": round(duration_pct, 2)
-    })
-
+    "Segment": segment_name,
+    "MW Range":
+        f"{segment_max:.2f} - {segment_min:.2f}",
+    "Duration %": round(duration_pct, 2)
+})
 
 # Average load
 fig_ldc.add_hline(
