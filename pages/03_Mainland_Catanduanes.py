@@ -3329,11 +3329,11 @@ else:
     # -------------------------------------------------
 
     color_map = {
-    "OK": "green",
-    "Monitor": "gold",
-    "Underperforming": "red",
-    "Unavailable": "gray",
-    "No Data": "lightgray"
+        "OK": "green",
+        "Monitor": "gold",
+        "Underperforming": "red",
+        "Unavailable": "gray",
+        "No Data": "lightgray"
     }
 
     fig_unit = go.Figure()
@@ -3370,8 +3370,7 @@ else:
     )
 
     fig_unit.update_layout(
-        title=
-            "Unit Sustained Capability Assessment",
+        title="Unit Sustained Capability Assessment",
         xaxis_title=
             "% of Operating Hours Above 80% of Dependable Capacity",
         yaxis_title="Plant | Unit",
