@@ -1614,114 +1614,15 @@ with c1:
         use_container_width=True
     )
 
-with c2:
-
-    pareto = plant_summary.copy()
-
-pareto["Cumulative %"] = (
-    pareto["Contribution %"]
-    .cumsum()
-)
-
-fig_pareto = go.Figure()
-
-fig_pareto.add_trace(
-    go.Bar(
-        x=pareto["Plant"],
-        y=pareto["Contribution %"],
-        name="Contribution %"
-    )
-)
-
-fig_pareto.add_trace(
-    go.Scatter(
-        x=pareto["Plant"],
-        y=pareto["Cumulative %"],
-        name="Cumulative %",
-        yaxis="y2",
-        mode="lines+markers"
-    )
-)
-
-# ----------------------------------
-# Assign Demand Segment to Each Hour
-# ----------------------------------
-
-ldc_hours = (
-    total_demand
-    .sort_values("Value", ascending=False)
-    .reset_index(drop=True)
-)
-
-ldc_hours["Segment"] = None
-
-scale_factor = len(ldc_hours) / len(ldc_seg)
-
-for i, (start_idx, end_idx) in enumerate(boundaries):
-
-    actual_start = int(start_idx * scale_factor)
-    actual_end = int(end_idx * scale_factor)
-
-    segment_name = get_segment_name(
-        i,
-        len(boundaries)
-    )
-
-    ldc_hours.loc[
-        actual_start:actual_end - 1,
-        "Segment"
-    ] = segment_name
-
-hour_segments = ldc_hours[
-    ["Datetime", "Segment"]
-]
-
-generation_segmented = generation.merge(
-    hour_segments,
-    on="Datetime",
-    how="inner"
-)
-
-segment_generation = (
-    generation_segmented
-    .groupby(
-        ["Segment", "Plant"],
-        as_index=False
-    )
-    .agg(
-        MW=("Value", "mean")
-    )
-)
-
-segment_order = [
-    "Baseload",
-    "Mid-Merit 2",
-    "Mid-Merit 1",
-    "Peaking"
-]
-
-segment_generation["Segment"] = pd.Categorical(
-    segment_generation["Segment"],
-    categories=[
-        s for s in segment_order
-        if s in segment_generation["Segment"].unique()
-    ],
-    ordered=True
-)
-
-fig_segment_role = px.bar(
-    segment_generation,
-    x="Segment",
-    y="MW",
-    color="Plant",
-    barmode="stack",
-    title="Generation Contribution by Load Regime"
-)
-
-st.plotly_chart(
-    fig_segment_role,
-    use_container_width=True
-)
+    with st.expander(
+        "View Plant Contribution Data",
+        expanded=False
+    ):
+        st.dataframe(
+            plant_summary.round(2),
+            use_container_width=True,
+            hide_index=True
+        )
 
 # =====================================================
 # OPTION 2 - PLANT ROLE MATRIX
@@ -1832,118 +1733,25 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =====================================================
-# OPTION 3 - CAPACITY FACTOR
-# =====================================================
-
-st.subheader(
-    "Plant Capacity Factor"
-)
-
-# Build capacity table directly from df
-
-capacity_tbl = (
-    df[
-        df["Attribute"]
-        .astype(str)
-        .str.upper()
-        .eq("GUARANTEED DEPENDABLE CAPACITY (KW)")
-    ]
-    .groupby(
-        "Plant",
-        as_index=False
-    )
-    .agg(
-        DependableMW=("Value", "sum")
-    )
-)
-
-capacity_factor = (
-    generation
-    .groupby(
-        "Plant",
-        as_index=False
-    )
-    .agg(
-        EnergyMWh=("Value", "sum")
-    )
-)
-
-capacity_factor = capacity_factor.merge(
-    capacity_tbl,
-    on="Plant",
-    how="left"
-)
-
-dataset_hours = (
-    generation["Datetime"]
-    .nunique()
-)
-
-capacity_factor["CapacityFactor"] = (
-    capacity_factor["EnergyMWh"]
-    /
-    (
-        capacity_factor["DependableMW"]
-        * dataset_hours
-    )
-    * 100
-)
-
-capacity_factor = capacity_factor[
-    capacity_factor["DependableMW"] > 0
-]
-
-capacity_factor = capacity_factor.sort_values(
-    "CapacityFactor"
-)
-
-fig_cf = go.Figure()
-
-fig_cf.add_trace(
-    go.Bar(
-        y=capacity_factor["Plant"],
-        x=capacity_factor["CapacityFactor"],
-        orientation="h",
-        text=capacity_factor[
-            "CapacityFactor"
-        ].round(1),
-        texttemplate="%{text:.1f}%",
-        textposition="outside"
-    )
-)
-
-fig_cf.update_layout(
-    title="Plant Capacity Factor",
-    xaxis_title="Capacity Factor (%)",
-    yaxis_title="Plant",
-    height=600,
-    yaxis=dict(
-        categoryorder="total ascending"
-    )
-)
-
-st.plotly_chart(
-    fig_cf,
-    use_container_width=True
-)
-
 with st.expander(
-    "View Capacity Factor Data",
+    "View Plant Role Matrix Data",
     expanded=False
 ):
     st.dataframe(
-        capacity_factor.round(2),
-        use_container_width=True,
-        hide_index=True
-    )
-
-with st.expander(
-    "View Plant Contribution Data",
-    expanded=False
-):
-    st.dataframe(
-        plant_summary,
+        role_df[
+            [
+                "Plant",
+                "EnergyMWh",
+                "AvgMW",
+                "EnergyContributionPct",
+                "PeakContributionPct"
+            ]
+        ]
+        .sort_values(
+            "EnergyContributionPct",
+            ascending=False
+        )
+        .round(2),
         use_container_width=True,
         hide_index=True
     )
