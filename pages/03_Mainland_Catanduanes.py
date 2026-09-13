@@ -976,9 +976,7 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
             )
     })
     
-segment_table = pd.DataFrame(
-    segment_rows
-)
+segment_table = pd.DataFrame(segment_rows)
 
 ldc_pct = (
     (ldc.index + 1)
@@ -1319,12 +1317,8 @@ fig_ldc.add_annotation(
 )
 
 fig_ldc.update_layout(
-    title=(
-        f"Load Duration Curve "
-        f"({segment_count} Segments)"
-    ),
-    xaxis_title=(
-        "Percent of Time Exceeded (%)",
+    title=f"Load Duration Curve ({num_segments} Segments)",
+    xaxis_title="Percent of Time Exceeded (%)",
     yaxis_title="Demand (MW)",
     height=600,
     hovermode="x unified",
