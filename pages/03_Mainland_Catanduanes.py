@@ -1244,8 +1244,8 @@ for i, (start_idx, end_idx) in enumerate(boundaries):
         y=segment_max,
         text=(
             f"<b>{segment_name}</b><br>"
-            f"{segment_min:.1f} - "
-            f"{segment_max:.1f} MW<br>"
+            f"{segment_max:.1f} - "
+            f"{segment_min:.1f} MW<br>"
             f"{duration_pct:.1f}%"
         ),
         showarrow=False,
