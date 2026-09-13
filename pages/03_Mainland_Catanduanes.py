@@ -1843,19 +1843,16 @@ st.sidebar.subheader(
     "Capacity Scenario"
 )
 
-st.write("capacity_data columns:")
-st.write(capacity_data.columns.tolist())
-
-st.write("capacity_data rows:")
-st.write(len(capacity_data))
-
 retired_plants = st.sidebar.multiselect(
     "Scenario: Retired / Unavailable Plants",
     options=sorted(
-        capacity_data["Plant"]
-        .dropna()
-        .unique()
-    ),
+    capacity_data.get(
+        "Plant",
+        pd.Series(dtype=str)
+    )
+    .dropna()
+    .unique()
+),
     default=[]
 )
 
@@ -1921,6 +1918,10 @@ removed_capacity_tbl = (
     )
     .agg(
         RemovedMW=("DependableMW", "sum")
+    )
+    .sort_values(
+        "RemoveMW",
+        ascending=False
     )
 )
 
