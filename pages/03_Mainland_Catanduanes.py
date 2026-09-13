@@ -1797,11 +1797,6 @@ with st.expander(
         hide_index=True
     )
 
-with st.expander(
-    f"Peak Demand Snapshot ({peak_datetime:%Y-%m-%d %H:%M})",
-    expanded=False
-)
-
 fig_peak_mix = go.Figure()
 
 fig_peak_mix.add_trace(
