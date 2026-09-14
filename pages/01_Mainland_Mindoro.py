@@ -78,10 +78,10 @@ capacity_reference = pd.DataFrame([
     {"Plant":"LCMHPP-UPPER","DependableMW":1.63},
     {"Plant":"LCMHPP-LOWER","DependableMW":1.02},
 
-    {"Plant":"INABASAN MHPP","DependableMW":7.50},
-    {"Plant":"CATUIRAN HEPP","DependableMW":4.03},
+    {"Plant":"INABASAN MHPP","DependableMW":10},
+    {"Plant":"CATUIRAN HEPP","DependableMW":4.4},
 
-    {"Plant":"PHESI-WEPF","DependableMW":0.00},
+    {"Plant":"PHESI-WEPF","DependableMW":16.00},
 
     {"Plant":"OPI","DependableMW":7.40},
     {"Plant":"POC","DependableMW":2.60},
@@ -2401,11 +2401,11 @@ with st.expander(
     )
 
 # =====================================================
-# PEAK HOUR PERFORMANCE ANALYSIS
+# Capability Utilization During Critical Demand
 # =====================================================
 
 st.subheader(
-    "Peak Hour Performance Analysis (90%-100% of Peak Demand)"
+    "Capability Utilization During Critical Demand (90%-100% of Peak Demand)"
 )
 
 peak_threshold = peak_demand * 0.90
@@ -2691,14 +2691,14 @@ def get_remarks(row):
     if row["Risk Flag"] == "Unavailable":
 
         return (
-            "Unit unavailable during the analysis period. "
+            "Plant unavailable during the analysis period. "
             "Performance assessment is not applicable."
         )
 
     if row["Risk Flag"] == "OK":
 
         return (
-            "Unit achieved expected capability "
+            "Plant achieved expected capability "
             "during peak-demand periods."
         )
 
@@ -2720,7 +2720,7 @@ def get_remarks(row):
         if "MHP" in plant:
 
             return (
-                "Unit was available but did not achieve "
+                "Plant was available but did not achieve "
                 "expected hydro output during peak periods."
             )
 
@@ -2810,7 +2810,7 @@ for flag in performance["Risk Flag"].unique():
 
 fig_perf.update_layout(
     title=(
-    "Unit Peak Support During Critical Hours"
+    "Plant Peak Support During Critical Hours"
     "(Max Peak MW / Dependable MW)"
 ),
     xaxis_title="Peak Support (%)",
@@ -2866,9 +2866,9 @@ st.caption(
     ÷ Total Operating Hours
 
     Interpretation:
-    • High Capability Realization = unit can reach its rated capability.
-    • High Utilization Factor = unit is heavily utilized.
-    • High Sustained Capability = unit can maintain strong output consistently,
+    • High Capability Realization = plant can reach its rated capability.
+    • High Utilization Factor = plant is heavily utilized.
+    • High Sustained Capability = plant can maintain strong output consistently,
       not just during isolated peak events.
     """
 )
@@ -2881,14 +2881,6 @@ dependable_capacity_tbl = (
     capacity_reference[
         ["Plant", "DependableMW"]
     ].copy()
-)
-
-dependable_capacity_tbl = (
-    dependable_capacity_tbl
-    .groupby("Plant", as_index=False)
-    .agg(
-        DependableMW=("DependableMW","sum")
-    )
 )
 
 # -----------------------------------------------------
@@ -2993,7 +2985,7 @@ def asset_remark(row):
             "but did not fully realize it."
         )
 
-    if "MHP" in plant:
+    if any(x in plant for x in ["MHP", "MHPP", "HEPP", "HPP"]):
         return (
             "Plant never achieved available capability. "
             "Investigate water resource, equipment "
