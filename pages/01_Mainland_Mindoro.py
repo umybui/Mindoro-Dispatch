@@ -1990,21 +1990,7 @@ projected_peak = (
     * (1 + growth_rate / 100) ** planning_horizon
 )
 
-cap_check = (
-    capacity_reference[
-        capacity_reference["Attribute"]
-        .eq(
-            "GUARANTEED DEPENDABLE CAPACITY (KW)"
-        )
-    ]
-    .groupby(
-        ["Plant"],
-        as_index=False
-    )
-    .agg(
-        DependableMW=("Value", "max")
-    )
-)
+cap_check = capacity_reference.copy()
 
 cap_check["Retired"] = (
     cap_check["Plant"]
@@ -2489,7 +2475,6 @@ with st.expander(
         peak_snapshot[
             [
                 "Plant",
-                "Unit",
                 "AvgPeakMW",
                 "MaxPeakMW",
                 "PeakEnergyMWh",
@@ -2626,32 +2611,7 @@ st.plotly_chart(
 )
 
 available_capacity_tbl = (
-    capacity_reference[
-        capacity_reference["Attribute"]
-        .isin(
-            [
-                "AVAILABLE CAPACITY (KW)",
-                "GUARANTEED DEPENDABLE CAPACITY (KW)",
-                "INSTALLED CAPACITY (KW)"
-            ]
-        )
-    ]
-    .pivot_table(
-        index=["Plant"],
-        columns="Attribute",
-        values="Value",
-        aggfunc="max"
-    )
-    .reset_index()
-)
-
-available_capacity_tbl.rename(
-    columns={
-        "AVAILABLE CAPACITY (KW)": "AvailableMW",
-        "GUARANTEED DEPENDABLE CAPACITY (KW)": "DependableMW",
-        "INSTALLED CAPACITY (KW)": "InstalledMW"
-    },
-    inplace=True
+    capacity_reference.copy()
 )
 
 # -----------------------------------------------------
@@ -2660,7 +2620,7 @@ available_capacity_tbl.rename(
 
 performance = peak_snapshot.merge(
     available_capacity_tbl,
-    on=["Plant","Unit"],
+    on="Plant",
     how="left"
 )
 
@@ -2801,7 +2761,6 @@ with st.expander(
         performance[
             [
                 "Plant",
-                "Unit",
                 "InstalledMW",
                 "DependableMW",
                 "AvailableMW",
@@ -2920,19 +2879,8 @@ st.caption(
 
 dependable_capacity_tbl = (
     capacity_reference[
-        capacity_reference["Attribute"]
-        .str.contains(
-            "GUARANTEED DEPENDABLE",
-            na=False
-        )
-    ]
-    .groupby(
-        ["Plant","Unit"],
-        as_index=False
-    )
-    .agg(
-        DependableMW=("Value","max")
-    )
+        ["Plant", "DependableMW"]
+    ].copy()
 )
 
 dependable_capacity_tbl = (
@@ -3153,328 +3101,4 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =====================================================
-# UNIT CAPABILITY REALIZATION
-# =====================================================
-
-st.subheader(
-    "Unit Capability Realization"
-)
-
-st.markdown(
-    """
-    **Story:** Evaluates whether individual units can
-    consistently sustain at least 80% of their
-    guaranteed dependable capacity throughout the
-    study period, rather than merely reaching full
-    output on isolated occasions.
-    """
-)
-
-if "Unit" not in df.columns:
-
-    st.warning(
-        "Column 'Unit' not found."
-    )
-
-else:
-
-    # -------------------------------------------------
-    # HOURLY UNIT GENERATION
-    # -------------------------------------------------
-
-    unit_hourly = (
-        filtered[
-            filtered["Attribute"]
-            .astype(str)
-            .str.upper()
-            .eq("NET MW")
-        ]
-        .groupby(
-            ["Datetime","Plant","Unit"],
-            as_index=False
-        )
-        .agg(
-            MW=("Value","sum")
-        )
-    )
-
-    # -------------------------------------------------
-    # DEPENDABLE CAPACITY
-    # -------------------------------------------------
-
-    unit_dependable = (
-        filtered[
-            filtered["Attribute"]
-            .astype(str)
-            .str.upper()
-            .eq(
-                "GUARANTEED DEPENDABLE CAPACITY (KW)"
-            )
-        ]
-        .groupby(
-            ["Plant","Unit"],
-            as_index=False
-        )
-        .agg(
-            DependableMW=("Value","max")
-        )
-    )
-
-    # -------------------------------------------------
-    # UNIT STATISTICS
-    # -------------------------------------------------
-
-    unit_perf = (
-        unit_hourly
-        .groupby(
-            ["Plant","Unit"],
-            as_index=False
-        )
-        .agg(
-            AvgMW=("MW","mean"),
-            MaxObservedMW=("MW","max"),
-            EnergyMWh=("MW","sum"),
-            OperatingHours=(
-                "MW",
-                lambda x: (x > 0).sum()
-            )
-        )
-    )
-
-    unit_perf = unit_perf.merge(
-        unit_dependable,
-        on=["Plant","Unit"],
-        how="left"
-    )
-
-    # -------------------------------------------------
-    # HOURS ABOVE 80% DEPENDABLE
-    # -------------------------------------------------
-
-    hourly_cap = (
-        unit_hourly.merge(
-            unit_dependable,
-            on=["Plant","Unit"],
-            how="left"
-        )
-    )
-
-    hourly_cap["Above80Pct"] = (
-        hourly_cap["MW"]
-        >=
-        hourly_cap["DependableMW"] * 0.80
-    )
-
-    sustained_tbl = (
-        hourly_cap
-        .groupby(
-            ["Plant","Unit"],
-            as_index=False
-        )
-        .agg(
-            HoursAbove80Pct=(
-                "Above80Pct",
-                "sum"
-            )
-        )
-    )
-
-    unit_perf = unit_perf.merge(
-        sustained_tbl,
-        on=["Plant","Unit"],
-        how="left"
-    )
-
-    # -------------------------------------------------
-    # KPIs
-    # -------------------------------------------------
-
-    unit_perf["CapabilityRealization %"] = (
-        unit_perf["MaxObservedMW"]
-        /
-        unit_perf["DependableMW"]
-        * 100
-    )
-
-    unit_perf["UtilizationFactor %"] = (
-        unit_perf["AvgMW"]
-        /
-        unit_perf["DependableMW"]
-        * 100
-    )
-
-    unit_perf["SustainedCapability %"] = (
-        unit_perf["HoursAbove80Pct"]
-        /
-        unit_perf["OperatingHours"]
-        * 100
-    )
-
-    # -------------------------------------------------
-    # RISK FLAG
-    # -------------------------------------------------
-
-    def get_unit_flag(row):
-
-        if pd.isna(row["DependableMW"]):
-            return "No Data"
-
-        if row["DependableMW"] <= 0:
-            return "Unavailable"
-
-        if row["SustainedCapability %"] >= 80:
-            return "OK"
-
-        if row["SustainedCapability %"] >= 40:
-            return "Monitor"
-
-        return "Underperforming"
-
-
-    unit_perf["Risk Flag"] = (
-        unit_perf.apply(
-            get_unit_flag,
-            axis=1
-        )
-    )
-
-    # -------------------------------------------------
-    # REMARKS
-    # -------------------------------------------------
-
-    def unit_remark(row):
-
-        if row["Risk Flag"] == "OK":
-            return (
-                "Frequently sustains at least 80% of dependable capacity."
-            )
-
-        if row["Risk Flag"] == "Monitor":
-            return (
-                "Moderate sustained capability. Performance should be monitored."
-            )
-
-        if row["Risk Flag"] == "Underperforming":
-            return (
-                "Unit was available but rarely sustained dependable capability. "
-                "Review outages, derating, maintenance, fuel supply, or dispatch strategy."
-            )
-
-        if row["Risk Flag"] == "Unavailable":
-            return (
-                "Unit unavailable during the analysis period."
-            )
-
-        return "Missing data."
-
-
-    unit_perf["Remarks"] = (
-        unit_perf.apply(
-            unit_remark,
-            axis=1
-        )
-    )
-
-    unit_perf["PlantUnit"] = (
-        unit_perf["Plant"]
-        + " | "
-        + unit_perf["Unit"].astype(str)
-    )
-
-    unit_perf = unit_perf.sort_values(
-        ["Plant", "SustainedCapability %"],
-        ascending=[True, True]
-    )
-    
-    # -------------------------------------------------
-    # TABLE
-    # -------------------------------------------------
-
-    with st.expander(
-        "View Unit Capability Realization Table",
-        expanded=False
-    ):
-        st.dataframe(
-            unit_perf[
-                [
-                    "Plant",
-                    "Unit",
-                    "DependableMW",
-                    "AvgMW",
-                    "MaxObservedMW",
-                    "OperatingHours",
-                    "HoursAbove80Pct",
-                    "UtilizationFactor %",
-                    "CapabilityRealization %",
-                    "SustainedCapability %",
-                    "Risk Flag",
-                    "Remarks"
-                ]
-            ],
-            use_container_width=True,
-            hide_index=True
-        )
-
-    # -------------------------------------------------
-    # CHART
-    # -------------------------------------------------
-
-    color_map = {
-        "OK": "green",
-        "Monitor": "gold",
-        "Underperforming": "red",
-        "Unavailable": "gray",
-        "No Data": "lightgray"
-    }
-
-    fig_unit = go.Figure()
-
-    for flag in unit_perf["Risk Flag"].unique():
-
-        temp = unit_perf[
-            unit_perf["Risk Flag"] == flag
-        ]
-
-        fig_unit.add_trace(
-            go.Bar(
-                y=temp["PlantUnit"],
-                x=temp["SustainedCapability %"],
-                orientation="h",
-                name=flag,
-                marker_color=color_map.get(
-                    flag,
-                    "blue"
-                )
-            )
-        )
-
-    fig_unit.add_vline(
-        x=80,
-        line_dash="dash",
-        line_color="green"
-    )
-
-    fig_unit.add_vline(
-        x=40,
-        line_dash="dash",
-        line_color="orange"
-    )
-
-    fig_unit.update_layout(
-        title="Unit Sustained Capability Assessment",
-        xaxis_title=
-            "% of Operating Hours Above 80% of Dependable Capacity",
-        yaxis_title="Plant | Unit",
-        height=max(
-            700,
-            len(unit_perf) * 30
-        ),
-        barmode="group"
-    )
-
-    st.plotly_chart(
-        fig_unit,
-        use_container_width=True
-    )
 
