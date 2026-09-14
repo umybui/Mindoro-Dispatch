@@ -2703,8 +2703,6 @@ demand periods.
     """
 )
 
-st.write(performance.columns.tolist())
-
 with st.expander(
     "View Peak Hour Performance Table",
     expanded=False
@@ -2714,7 +2712,6 @@ with st.expander(
             [
                 "Plant",
                 "Unit",
-                "InstalledMW",
                 "DependableMW",
                 "AvailableMW",
                 "AvgPeakMW",
