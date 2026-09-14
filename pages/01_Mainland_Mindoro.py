@@ -41,6 +41,14 @@ def load_data():
 
 df = load_data()
 
+st.write(
+    sorted(
+        df["Attribute"]
+        .dropna()
+        .unique()
+        )
+)
+
 # Optional manual refresh
 if st.sidebar.button("Refresh Data"):
     st.cache_data.clear()
