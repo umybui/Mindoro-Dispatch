@@ -336,6 +336,12 @@ generation = generation[
 # KPI DISPLAY
 # =====================================================
 
+st.write(
+    sorted(
+        df["Attribute"]
+        .dropna()
+        .unique
+
 r1c1, r1c2, r1c3, r1c4 = st.columns(4)
 
 with r1c1:
@@ -1847,7 +1853,7 @@ capacity_data = df[
     .isin(
         [
             "Installed Capacity (MW)",
-            "Installed Capacity (MW)",
+            "Dependable Capacity",
             "Output"
         ]
     )
