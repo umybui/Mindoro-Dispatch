@@ -336,12 +336,6 @@ generation = generation[
 # KPI DISPLAY
 # =====================================================
 
-st.write(
-    sorted(
-        df["Attribute"]
-        .dropna()
-        .unique
-
 r1c1, r1c2, r1c3, r1c4 = st.columns(4)
 
 with r1c1:
@@ -1852,9 +1846,8 @@ capacity_data = df[
     .str.upper()
     .isin(
         [
-            "Installed Capacity (MW)",
-            "Dependable Capacity",
-            "Output"
+            "INSTALLED CAPACITY (MW)",
+            "DEPENDABLE CAPACITY"
         ]
     )
 ].copy()
@@ -1902,7 +1895,7 @@ cap_check = (
     capacity_data[
         capacity_data["Attribute"]
         .eq(
-            "Installed Capacity (MW)"
+            "DEPENDABLE CAPACITY"
         )
     ]
     .groupby(
@@ -2287,7 +2280,7 @@ for trace in fig.data:
 # -----------------------------------------------------
 
 fig.update_layout(
-    title="Catanduanes Dispatch",
+    title="Palawan Dispatch",
     hovermode="x unified",
     height=900,
     xaxis_title="Datetime",
@@ -2545,9 +2538,8 @@ available_capacity_tbl = (
         capacity_data["Attribute"]
         .isin(
             [
-                "Output",
-                "Installed Capacity (MW)",
-                "Installed Capacity (MW)"
+                "DEPENDABLE CAPACITY",
+                "INSTALLED CAPACITY (MW)"
             ]
         )
     ]
@@ -2562,11 +2554,14 @@ available_capacity_tbl = (
 
 available_capacity_tbl.rename(
     columns={
-        "Output": "AvailableMW",
-        "Installed Capacity (MW)": "DependableMW",
-        "Installed Capacity (MW)": "InstalledMW"
+        "DEPENDABLE CAPACITY": "DependableMW",
+        "INSTALLED CAPACITY (MW)": "InstalledMW"
     },
     inplace=True
+)
+
+available_capacity_tbl["AvailableMW"] = (
+    available_capacity_tbl["DependableMW"]
 )
 
 # -----------------------------------------------------
@@ -2837,7 +2832,7 @@ dependable_capacity_tbl = (
     capacity_data[
         capacity_data["Attribute"]
         .str.contains(
-            "GUARANTEED DEPENDABLE",
+            "DEPENDABLE CAPACITY",
             na=False
         )
     ]
@@ -3124,7 +3119,7 @@ else:
             .astype(str)
             .str.upper()
             .eq(
-                "Installed Capacity (MW)"
+                "DEPENDABLE CAPACITY"
             )
         ]
         .groupby(
