@@ -1958,29 +1958,6 @@ st.plotly_chart(
 )
 
 # -----------------------------------------------------
-# CAPACITY DATA
-# -----------------------------------------------------
-
-capacity_data = df[
-    df["Attribute"]
-    .astype(str)
-    .str.upper()
-    .isin(
-        [
-            "INSTALLED CAPACITY (KW)",
-            "GUARANTEED DEPENDABLE CAPACITY (KW)",
-            "AVAILABLE CAPACITY (KW)"
-        ]
-    )
-].copy()
-
-capacity_data["Attribute"] = (
-    capacity_data["Attribute"]
-    .astype(str)
-    .str.upper()
-)
-
-# -----------------------------------------------------
 # CAPACITY SCENARIO
 # -----------------------------------------------------
 
@@ -1991,7 +1968,7 @@ st.sidebar.subheader(
 retired_plants = st.sidebar.multiselect(
     "Scenario: Retired / Unavailable Plants",
     options=sorted(
-        capacity_data["Plant"]
+        capacity_reference["Plant"]
         .dropna()
         .unique()
     ),
@@ -2014,14 +1991,14 @@ projected_peak = (
 )
 
 cap_check = (
-    capacity_data[
-        capacity_data["Attribute"]
+    capacity_reference[
+        capacity_reference["Attribute"]
         .eq(
             "GUARANTEED DEPENDABLE CAPACITY (KW)"
         )
     ]
     .groupby(
-        ["Plant", "Unit"],
+        ["Plant"],
         as_index=False
     )
     .agg(
@@ -2190,7 +2167,7 @@ with st.expander(
 
     st.dataframe(
         cap_check.sort_values(
-            ["Plant", "Unit"]
+            ["Plant"]
         ),
         use_container_width=True,
         hide_index=True
@@ -2402,7 +2379,7 @@ for trace in fig.data:
 # -----------------------------------------------------
 
 fig.update_layout(
-    title="Catanduanes Dispatch",
+    title="Mainland Mindoro Dispatch",
     hovermode="x unified",
     height=900,
     xaxis_title="Datetime",
@@ -2460,14 +2437,9 @@ peak_generation = generation[
 # PEAK HOUR SNAPSHOT
 # -----------------------------------------------------
 
-peak_snapshot = (
-    filtered[
-        filtered["Attribute"]
-        .astype(str)
-        .str.upper()
-        .eq("ACTUAL (KW)")
-    ]
-)
+peak_snapshot = generation[
+    generation["Datetime"].isin(peak_hours)
+].copy()
 
 peak_snapshot = peak_snapshot[
     peak_snapshot["Datetime"].isin(peak_hours)
@@ -2476,7 +2448,7 @@ peak_snapshot = peak_snapshot[
 peak_snapshot = (
     peak_snapshot
     .groupby(
-        ["Plant","Unit"],
+        ["Plant"],
         as_index=False
     )
     .agg(
@@ -2488,8 +2460,6 @@ peak_snapshot = (
 
 peak_snapshot["PlantUnit"] = (
     peak_snapshot["Plant"]
-    + " | "
-    + peak_snapshot["Unit"].astype(str)
 )
 
 peak_snapshot["PeakEnergyShare %"] = (
@@ -2656,8 +2626,8 @@ st.plotly_chart(
 )
 
 available_capacity_tbl = (
-    capacity_data[
-        capacity_data["Attribute"]
+    capacity_reference[
+        capacity_reference["Attribute"]
         .isin(
             [
                 "AVAILABLE CAPACITY (KW)",
@@ -2667,7 +2637,7 @@ available_capacity_tbl = (
         )
     ]
     .pivot_table(
-        index=["Plant", "Unit"],
+        index=["Plant"],
         columns="Attribute",
         values="Value",
         aggfunc="max"
@@ -2949,8 +2919,8 @@ st.caption(
 # -----------------------------------------------------
 
 dependable_capacity_tbl = (
-    capacity_data[
-        capacity_data["Attribute"]
+    capacity_reference[
+        capacity_reference["Attribute"]
         .str.contains(
             "GUARANTEED DEPENDABLE",
             na=False
@@ -3218,7 +3188,7 @@ else:
             filtered["Attribute"]
             .astype(str)
             .str.upper()
-            .eq("ACTUAL (KW)")
+            .eq("NET MW")
         ]
         .groupby(
             ["Datetime","Plant","Unit"],
