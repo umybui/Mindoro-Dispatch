@@ -3083,7 +3083,7 @@ st.markdown(
     """
     **Story:** Evaluates whether individual units can
     consistently sustain at least 80% of their
-    guaranteed dependable capacity throughout the
+    dependable capacity throughout the
     study period, rather than merely reaching full
     output on isolated occasions.
     """
