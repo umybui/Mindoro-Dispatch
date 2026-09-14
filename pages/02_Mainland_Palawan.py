@@ -23,12 +23,12 @@ def load_data():
 
     df = pd.read_excel(
         "PALECO Dispatch Summary.xlsx",
-        sheet_name="2 PALECO Reports",
+        sheet_name="2  PALECO Reports",
         engine="openpyxl"
     )
 
     df["Datetime"] = pd.to_datetime(
-        df["DateTime"],
+        df["Datetime"],
         errors="coerce"
     )
 
