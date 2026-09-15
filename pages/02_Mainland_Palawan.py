@@ -663,11 +663,6 @@ st.plotly_chart(
     use_container_width=True
 )
 
-st.plotly_chart(
-    fig_tech_heat,
-    use_container_width=True
-)
-
 # =====================================================
 # MONTHLY RELIABILITY OVERVIEW
 # =====================================================
@@ -677,6 +672,11 @@ gap_df["MonthYear"] = (
     .dt.to_period("M")
     .astype(str)
 )
+
+gap_df["LowReserveFlag"] = (
+            gap_df["ReserveMargin"]
+            < gap_df["RequiredReserve"]
+        )
 
 monthly_summary = (
     gap_df
@@ -712,12 +712,7 @@ monthly_summary = (
                 x < 0
             ).sum()
         ),
-
-        gap_df["LowReserveFlag"] = (
-            gap_df["ReserveMargin"]
-            < gap_df["RequiredReserve"]
-        )
-        
+      
         LowReserveHours=(
             "LowReserveFlag",
             "sum"
