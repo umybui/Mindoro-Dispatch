@@ -234,6 +234,10 @@ gap_df["ReserveMargin"] = (
     - gap_df["TotalDemand"]
 )
 
+gap_df["RequiredReserve"] = (
+    gap_df["TotalGeneration"] * 0.10
+)
+
 peak_demand = gap_df["TotalDemand"].max()
 
 peak_row = gap_df.loc[
@@ -261,7 +265,8 @@ unserved_energy = (
 )
 
 hours_low_reserve = (
-    gap_df["ReserveMargin"] < 5
+    gap_df["ReserveMargin"]
+    < gap_df["RequiredReserve"]
 ).sum()
 
 total_shortage_mwh = gap_df.loc[
