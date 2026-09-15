@@ -478,27 +478,6 @@ generation["Technology"] = (
     .apply(get_technology)
 )
 
-plant_mix = (
-    generation
-    .groupby(
-        ["Technology","Plant"],
-        as_index=False
-    )["Value"]
-    .sum()
-)
-
-plant_mix["Share"] = (
-    plant_mix["Value"]
-    /
-    plant_mix["Value"].sum()
-    * 100
-)
-
-show_breakdown = st.toggle(
-    "Break down by power plant",
-    value=False
-)
-
 # -----------------------------------------------------
 # OVERALL TECHNOLOGY MIX
 # -----------------------------------------------------
@@ -571,15 +550,109 @@ fig_tech.update_layout(
     showlegend=False
 )
 
-st.plotly_chart(
-    fig_tech,
-    use_container_width=True
-)
-
-show_breakdown = st.checkbox(
-    "Show Plant Breakdown by Technology",
+show_breakdown = st.toggle(
+    "Break down by power plant",
     value=False
 )
+
+if not show_breakdown:
+
+    st.plotly_chart(
+        fig_tech,
+        use_container_width=True
+    )
+
+else:
+
+    plant_mix = (
+        generation
+        .groupby(
+            ["Technology", "Plant"],
+            as_index=False
+        )["Value"]
+        .sum()
+    )
+
+    plant_mix["Share"] = (
+        plant_mix["Value"]
+        /
+        plant_mix["Value"].sum()
+        * 100
+    )
+
+    fig_plant_mix = go.Figure()
+
+    color_map = {
+        "Bunker": [
+            "#E65100",
+            "#F57C00",
+            "#FFB74D"
+        ],
+        "Thermal": [
+            "#B71C1C",
+            "#E53935",
+            "#FF8A80"
+        ],
+        "Diesel": [
+            "#0D47A1",
+            "#1976D2",
+            "#90CAF9"
+        ]
+    }
+
+    for tech in ["Bunker", "Thermal", "Diesel", "Other"]:
+
+        tech_data = plant_mix[
+            plant_mix["Technology"] == tech
+        ]
+
+        shades = color_map.get(
+            tech,
+            ["#757575"]
+        )
+
+        for i, (_, row) in enumerate(
+            tech_data.iterrows()
+        ):
+
+            fig_plant_mix.add_trace(
+                go.Bar(
+                    y=[""],
+                    x=[row["Share"]],
+                    name=row["Plant"],
+                    orientation="h",
+                    marker=dict(
+                        color=shades[
+                            min(
+                                i,
+                                len(shades)-1
+                            )
+                        ],
+                        line=dict(
+                            width=2,
+                            color="white"
+                        )
+                    ),
+                    text=(
+                        f"{row['Plant']}<br>"
+                        f"{row['Share']:.1f}%"
+                    ),
+                    textposition="inside"
+                )
+            )
+
+    fig_plant_mix.update_layout(
+        barmode="stack",
+        height=140,
+        showlegend=True,
+        xaxis_title="Share of Generated Energy (%)",
+        yaxis_title=""
+    )
+
+    st.plotly_chart(
+        fig_plant_mix,
+        use_container_width=True
+    )
 
 # -----------------------------------------------------
 # MONTHLY TECHNOLOGY SHARE HEATMAP
