@@ -480,11 +480,12 @@ generation["Technology"] = (
 )
 
 tech_mix = (
-    tech_mix
-    .sort_values(
-        "Share",
-        ascending=False
-    )
+    generation
+    .groupby(
+        "Technology",
+        as_index=False
+    )["Value"]
+    .sum()
 )
 
 tech_mix["Share"] = (
@@ -492,6 +493,11 @@ tech_mix["Share"] = (
     /
     tech_mix["Value"].sum()
     * 100
+)
+
+tech_mix = tech_mix.sort_values(
+    "Share",
+    ascending=False
 )
 
 fig_tech = go.Figure()
