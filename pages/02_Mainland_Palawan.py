@@ -445,20 +445,19 @@ def get_technology(plant):
     plant = str(plant).upper()
 
     if plant in [
-        "E-DELTA P",
-        "ABORLAN"
+        "e-DELTA P",
+        "DMCI ABORLAN"
     ]:
         return "Bunker"
 
-    if plant == "NARRA":
+    if plant == "DMCI NARRA":
         return "Thermal"
 
     if plant in [
-        "T-DELTA P",
-        "QUEZON",
-        "IRAWAN",
-        "IRAWAN EPSA",
-        "RIO TUBA",
+        "tDELTA P",
+        "DMCI QUEZON",
+        "DMCI IRAWAN EPSA",
+        "DMCI RIO TUBA",
         "VPOWER"
     ]:
         return "Diesel"
