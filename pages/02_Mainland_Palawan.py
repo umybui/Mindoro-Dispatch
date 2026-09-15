@@ -446,9 +446,10 @@ def get_technology(plant):
 
     # Bunker
     if (
-        "DELTA" in plant
-        and "E" in plant
-    ) or "ABORLAN" in plant:
+        "E-DELTA" in plant
+        or "EDELTA" in plant
+        or "ABORLAN" in plant
+    ):
         return "Bunker"
 
     # Thermal
@@ -459,8 +460,8 @@ def get_technology(plant):
     if any(
         x in plant
         for x in [
-            "TDELTA",
             "T-DELTA",
+            "TDELTA",
             "QUEZON",
             "IRAWAN",
             "EPSA",
