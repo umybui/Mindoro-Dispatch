@@ -538,7 +538,7 @@ for _, row in tech_mix.iterrows():
 
 fig_tech.update_layout(
     barmode="stack",
-    height=110,
+    height=220,
     margin=dict(
         l=20,
         r=20,
@@ -555,12 +555,40 @@ show_breakdown = st.toggle(
     value=False
 )
 
+# =====================================================
+# CONSTANT CHART HEIGHT
+# =====================================================
+
+MIX_HEIGHT = 220
+
+# =====================================================
+# TECHNOLOGY VIEW
+# =====================================================
+
+fig_tech.update_layout(
+    barmode="stack",
+    height=MIX_HEIGHT,
+    margin=dict(
+        l=20,
+        r=20,
+        t=20,
+        b=40
+    ),
+    xaxis_title="Share of Generated Energy (%)",
+    yaxis_title="",
+    showlegend=False
+)
+
 if not show_breakdown:
 
     st.plotly_chart(
         fig_tech,
         use_container_width=True
     )
+
+# =====================================================
+# POWER PLANT BREAKDOWN
+# =====================================================
 
 else:
 
@@ -580,31 +608,73 @@ else:
         * 100
     )
 
+    tech_order = [
+        "Bunker",
+        "Thermal",
+        "Diesel",
+        "Other"
+    ]
+
     fig_plant_mix = go.Figure()
 
     color_map = {
         "Bunker": [
             "#E65100",
             "#F57C00",
-            "#FFB74D"
+            "#FFB74D",
+            "#FFE0B2"
         ],
         "Thermal": [
             "#B71C1C",
-            "#E53935",
-            "#FF8A80"
+            "#D32F2F",
+            "#EF5350",
+            "#FFCDD2"
         ],
         "Diesel": [
             "#0D47A1",
+            "#1565C0",
             "#1976D2",
-            "#90CAF9"
+            "#42A5F5",
+            "#90CAF9",
+            "#BBDEFB",
+            "#E3F2FD"
+        ],
+        "Other": [
+            "#757575"
         ]
     }
 
-    for tech in ["Bunker", "Thermal", "Diesel", "Other"]:
+    running_position = 0
+
+    for tech in tech_order:
 
         tech_data = plant_mix[
             plant_mix["Technology"] == tech
-        ]
+        ].copy()
+
+        if tech_data.empty:
+            continue
+
+        tech_data = tech_data.sort_values(
+            "Share",
+            ascending=False
+        )
+
+        tech_total = tech_data["Share"].sum()
+
+        midpoint = running_position + tech_total / 2
+
+        fig_plant_mix.add_annotation(
+            x=midpoint,
+            y=1.25,
+            xref="x",
+            yref="paper",
+            text=f"<b>{tech.upper()}</b>",
+            showarrow=False,
+            font=dict(
+                size=14
+            )
+        )
 
         shades = color_map.get(
             tech,
@@ -615,6 +685,13 @@ else:
             tech_data.iterrows()
         ):
 
+            color = shades[
+                min(
+                    i,
+                    len(shades) - 1
+                )
+            ]
+
             fig_plant_mix.add_trace(
                 go.Bar(
                     y=[""],
@@ -622,15 +699,10 @@ else:
                     name=row["Plant"],
                     orientation="h",
                     marker=dict(
-                        color=shades[
-                            min(
-                                i,
-                                len(shades)-1
-                            )
-                        ],
+                        color=color,
                         line=dict(
-                            width=2,
-                            color="white"
+                            color="white",
+                            width=2
                         )
                     ),
                     text=(
@@ -641,12 +713,29 @@ else:
                 )
             )
 
+        running_position += tech_total
+
+        if running_position < 100:
+
+            fig_plant_mix.add_vline(
+                x=running_position,
+                line_width=4,
+                line_color="white"
+            )
+
     fig_plant_mix.update_layout(
         barmode="stack",
-        height=140,
-        showlegend=True,
+        height=MIX_HEIGHT,
+        margin=dict(
+            l=20,
+            r=20,
+            t=60,
+            b=40
+        ),
         xaxis_title="Share of Generated Energy (%)",
-        yaxis_title=""
+        yaxis_title="",
+        showlegend=True,
+        legend_title="Power Plant"
     )
 
     st.plotly_chart(
