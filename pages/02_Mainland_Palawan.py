@@ -371,7 +371,7 @@ hours_low_reserve = (
 # KPI DISPLAY
 # =====================================================
 
-r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns(5)
 
 with r1c1:
     st.metric(
@@ -387,11 +387,17 @@ with r1c2:
 
 with r1c3:
     st.metric(
+        "Demand Energy",
+        f"{demand_energy_mwh:,.2f} MWh"
+    )
+
+with r1c4:
+    st.metric(
         "Generated Energy",
         f"{generated_energy_mwh:,.2f} MWh"
     )
 
-with r1c4:
+with r1c5:
     st.metric(
         "Unserved Energy",
         f"{unserved_energy:,.2f} MWh"
