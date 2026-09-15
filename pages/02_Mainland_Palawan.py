@@ -647,6 +647,24 @@ st.plotly_chart(
     use_container_width=True
 )
 
+st.dataframe(
+    generation[
+        ["Plant","Technology"]
+    ]
+    .drop_duplicates()
+    .sort
+
+with st.expander(
+    "View Monthly Technology Share Matrix (%)",
+    expanded=False
+):
+
+    st.dataframe(
+        heat_tech.round(1)
+        .style.format("{:.1f}%"),
+        use_container_width=True
+    )
+
 # =====================================================
 # MONTHLY RELIABILITY OVERVIEW
 # =====================================================
