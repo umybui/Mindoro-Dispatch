@@ -332,6 +332,41 @@ generation = generation[
     generation["Plant"].isin(selected_plants)
 ]
 
+peak_generation_mw = (
+    gap_df["TotalGeneration"]
+    .max()
+)
+
+generated_energy_mwh = (
+    generation["Value"]
+    .sum()
+)
+
+average_load = (
+    total_demand["Value"]
+    .mean()
+)
+
+load_factor = (
+    average_load
+    / peak_demand
+    * 100
+)
+
+# Philippine small-grid reserve criterion
+gap_df["RequiredReserve"] = (
+    gap_df["TotalGeneration"] * 0.10
+)
+
+hours_low_reserve = (
+    gap_df["ReserveMargin"]
+    < gap_df["RequiredReserve"]
+).sum()
+
+# =====================================================
+# KPI DISPLAY
+# =====================================================
+
 # =====================================================
 # KPI DISPLAY
 # =====================================================
@@ -346,37 +381,142 @@ with r1c1:
 
 with r1c2:
     st.metric(
-        "Maximum Shortage",
-        f"{max_shortage:,.2f} MW"
+        "Peak Generation",
+        f"{peak_generation_mw:,.2f} MW"
     )
 
 with r1c3:
+    st.metric(
+        "Generated Energy",
+        f"{generated_energy_mwh:,.2f} MWh"
+    )
+
+with r1c4:
     st.metric(
         "Unserved Energy",
         f"{unserved_energy:,.2f} MWh"
     )
 
-with r1c4:
+r2c1, r2c2, r2c3, r2c4 = st.columns(4)
+
+with r2c1:
     st.metric(
         "Hours with Shortage",
         f"{hours_with_shortage:,}"
     )
 
-r2c1, r2c2 = st.columns(2)
-
-with r2c1:
+with r2c2:
     st.metric(
-        "Low Reserve Hours (<5 MW)",
+        "Low Reserve Hours",
         f"{hours_low_reserve:,}"
     )
 
-with r2c2:
+with r2c3:
+    st.metric(
+        "Load Factor",
+        f"{load_factor:.1f}%"
+    )
+
+with r2c4:
     st.metric(
         "Peak Demand Time",
         peak_datetime.strftime(
             "%Y-%m-%d %H:%M"
         )
     )
+
+st.caption(
+    """
+    Hours with Shortage = hours where Total Demand exceeded
+    Total Supply by at least 0.01 MW.
+
+    Low Reserve Hours = hours where Reserve Margin was less
+    than the required operating reserve equivalent to 10% of
+    synchronized generation capacity.
+    """
+)
+
+# =====================================================
+# GENERATION MIX BY TECHNOLOGY
+# =====================================================
+
+def get_technology(plant):
+
+    plant = str(plant).upper()
+
+    if "SOLAR" in plant:
+        return "Solar"
+
+    if any(
+        x in plant
+        for x in [
+            "HYDRO",
+            "HPP",
+            "MHP",
+            "MHPP",
+            "HEPP"
+        ]
+    ):
+        return "Hydro"
+
+    if "BESS" in plant:
+        return "Battery"
+
+    return "Conventional"
+
+generation["Technology"] = (
+    generation["Plant"]
+    .apply(get_technology)
+)
+
+tech_mix = (
+    generation
+    .groupby(
+        "Technology",
+        as_index=False
+    )["Value"]
+    .sum()
+)
+
+tech_mix["Share"] = (
+    tech_mix["Value"]
+    /
+    tech_mix["Value"].sum()
+    * 100
+)
+
+fig_tech = go.Figure()
+
+for _, row in tech_mix.iterrows():
+
+    fig_tech.add_trace(
+        go.Bar(
+            y=["Generation Mix"],
+            x=[row["Share"]],
+            name=row["Technology"],
+            orientation="h",
+            text=f"{row['Share']:.1f}%",
+            textposition="inside"
+        )
+    )
+
+fig_tech.update_layout(
+    barmode="stack",
+    height=140,
+    margin=dict(
+        l=20,
+        r=20,
+        t=20,
+        b=20
+    ),
+    xaxis_title="Share of Generated Energy (%)",
+    yaxis_title=""
+)
+
+st.plotly_chart(
+    fig_tech,
+    use_container_width=True
+)
 
 # =====================================================
 # MONTHLY RELIABILITY OVERVIEW
@@ -502,15 +642,11 @@ monthly_display = (
             "MonthName",
             "PeakDemand",
             "AverageDemand",
-            "MinimumReserve",
             "MaxShortage",
             "HoursWithShortage",
-            "CriticalHours",
             "LowReserveHours",
             "UnservedEnergy",
-            "LoadFactor",
-            "ReserveAdequacyPct",
-            "EnergyNotServedPct"
+            "LoadFactor"
         ]
     ]
 )
@@ -523,12 +659,9 @@ st.dataframe(
     monthly_display.round({
         "PeakDemand": 2,
         "AverageDemand": 2,
-        "MinimumReserve": 2,
         "MaxShortage": 2,
         "UnservedEnergy": 2,
-        "LoadFactor": 1,
-        "ReserveAdequacyPct": 1,
-        "EnergyNotServedPct": 2
+        "LoadFactor": 1
     }),
     use_container_width=True,
     hide_index=True
@@ -641,11 +774,6 @@ load_factor = (
     average_load
     / peak_demand
     * 100
-)
-
-st.metric(
-    "Load Factor",
-    f"{load_factor:.1f}%"
 )
 
 st.subheader(
