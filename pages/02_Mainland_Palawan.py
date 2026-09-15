@@ -444,18 +444,15 @@ def get_technology(plant):
 
     plant = str(plant).upper()
 
-    # Bunker
     if plant in [
         "E-DELTA P",
         "ABORLAN"
     ]:
         return "Bunker"
 
-    # Thermal
     if plant == "NARRA":
         return "Thermal"
 
-    # Diesel
     if plant in [
         "T-DELTA P",
         "QUEZON",
@@ -468,10 +465,15 @@ def get_technology(plant):
 
     return "Other"
 
+
 generation["Technology"] = (
     generation["Plant"]
     .apply(get_technology)
 )
+
+# -----------------------------------------------------
+# OVERALL TECHNOLOGY MIX
+# -----------------------------------------------------
 
 tech_mix = (
     generation
@@ -494,14 +496,14 @@ tech_mix = tech_mix.sort_values(
     ascending=False
 )
 
-fig_tech = go.Figure()
-
 tech_colors = {
     "Diesel": "#1565C0",
     "Thermal": "#E53935",
     "Bunker": "#FB8C00",
     "Other": "#757575"
 }
+
+fig_tech = go.Figure()
 
 for _, row in tech_mix.iterrows():
 
@@ -513,7 +515,7 @@ for _, row in tech_mix.iterrows():
             orientation="h",
             marker_color=tech_colors.get(
                 row["Technology"],
-                "#7f7f7f"
+                "#757575"
             ),
             text=(
                 f"{row['Technology']}<br>"
@@ -541,37 +543,14 @@ fig_tech.update_layout(
     showlegend=False
 )
 
-heat_tech = (
-    tech_month
-    .pivot(
-        index="Technology",
-        columns="MonthLabel",
-        values="Share"
-    )
-    .fillna(0)
-)
-
-tech_order = [
-    "Diesel",
-    "Thermal",
-    "Bunker",
-    "Other"
-]
-
-heat_tech = (
-    heat_tech
-    .reindex(tech_order)
-    .fillna(0)
-)
-
 st.plotly_chart(
     fig_tech,
     use_container_width=True
 )
 
-# =====================================================
-# MONTHLY TECHNOLOGY SHARE
-# =====================================================
+# -----------------------------------------------------
+# MONTHLY TECHNOLOGY SHARE HEATMAP
+# -----------------------------------------------------
 
 generation["MonthLabel"] = (
     generation["Datetime"]
@@ -637,8 +616,14 @@ month_order = (
     .sort_values("MonthDate")
 )
 
+valid_months = [
+    m
+    for m in month_order["MonthLabel"]
+    if m in heat_tech.columns
+]
+
 heat_tech = heat_tech[
-    month_order["MonthLabel"]
+    valid_months
 ]
 
 fig_tech_heat = go.Figure(
@@ -716,7 +701,7 @@ monthly_summary = (
         LowReserveHours=(
             "LowReserveFlag",
             "sum"
-        )
+        ),
 
         UnservedEnergy=(
             "ShortageMW",
