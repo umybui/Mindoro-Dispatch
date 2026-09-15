@@ -445,31 +445,25 @@ def get_technology(plant):
     plant = str(plant).upper()
 
     # Bunker
-    if any(
-        x in plant
-        for x in [
-            "E-DELTA",
-            "ABORLAN"
-        ]
-    ):
+    if plant in [
+        "E-DELTA P",
+        "ABORLAN"
+    ]:
         return "Bunker"
 
     # Thermal
-    if "NARRA" in plant:
+    if plant == "NARRA":
         return "Thermal"
 
     # Diesel
-    if any(
-        x in plant
-        for x in [
-            "T-DELTA",
-            "QUEZON",
-            "IRAWAN",
-            "EPSA",
-            "RIO TUBA",
-            "VPOWER"
-        ]
-    ):
+    if plant in [
+        "T-DELTA P",
+        "QUEZON",
+        "IRAWAN",
+        "IRAWAN EPSA",
+        "RIO TUBA",
+        "VPOWER"
+    ]:
         return "Diesel"
 
     return "Other"
@@ -502,18 +496,36 @@ tech_mix = tech_mix.sort_values(
 
 fig_tech = go.Figure()
 
+tech_colors = {
+    "Diesel": "#1565C0",
+    "Thermal": "#E53935",
+    "Bunker": "#FB8C00",
+    "Other": "#757575"
+}
+
 for _, row in tech_mix.iterrows():
 
-    fig_tech.add_trace(
-        go.Bar(
-            y=["Generation Mix by Technology (Energy Basis)"],
-            x=[row["Share"]],
-            name=row["Technology"],
-            orientation="h",
-            text=f"{row['Share']:.1f}%",
-            textposition="inside"
+fig_tech.add_trace(
+    go.Bar(
+        y=["Technology Mix"],
+        x=[row["Share"]],
+        name=row["Technology"],
+        orientation="h",
+        marker_color=tech_colors.get(
+            row["Technology"],
+            "#7f7f7f"
+        ),
+        text=(
+            f"{row['Technology']}<br>"
+            f"{row['Share']:.1f}%"
+        ),
+        textposition="inside",
+        textfont=dict(
+            color="white",
+            size=12
         )
     )
+)
 
 fig_tech.update_layout(
     barmode="stack",
@@ -525,11 +537,83 @@ fig_tech.update_layout(
         b=20
     ),
     xaxis_title="Share of Generated Energy (%)",
-    yaxis_title=""
+    yaxis_title="",
+    showlegend=False
 )
 
 st.plotly_chart(
     fig_tech,
+    use_container_width=True
+)
+
+# =====================================================
+# MONTHLY TECHNOLOGY SHARE
+# =====================================================
+
+generation["MonthLabel"] = (
+    generation["Datetime"]
+    .dt.strftime("%b %Y")
+)
+
+tech_month = (
+    generation
+    .groupby(
+        ["MonthLabel", "Technology"],
+        as_index=False
+    )["Value"]
+    .sum()
+)
+
+month_total = (
+    tech_month
+    .groupby("MonthLabel")["Value"]
+    .sum()
+)
+
+tech_month["Share"] = (
+    tech_month["Value"]
+    /
+    tech_month["MonthLabel"]
+    .map(month_total)
+    * 100
+)
+
+month_order = (
+    generation
+    .assign(
+        MonthDate=
+        generation["Datetime"]
+        .dt.to_period("M")
+        .dt.to_timestamp()
+    )
+    [["MonthLabel","MonthDate"]]
+    .drop_duplicates()
+    .sort_values("MonthDate")
+)
+
+heat_tech = heat_tech[
+    month_order["MonthLabel"]
+]
+
+fig_tech_heat = go.Figure(
+    data=go.Heatmap(
+        z=heat_tech.values,
+        x=heat_tech.columns,
+        y=heat_tech.index,
+        colorscale="Blues",
+        text=heat_tech.round(1).values,
+        texttemplate="%{text}%",
+        colorbar_title="% Share"
+    )
+)
+
+fig_tech_heat.update_layout(
+    title="Monthly Generation Share by Technology",
+    height=300
+)
+
+st.plotly_chart(
+    fig_tech_heat,
     use_container_width=True
 )
 
