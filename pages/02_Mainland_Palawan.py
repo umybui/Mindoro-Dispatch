@@ -505,31 +505,31 @@ tech_colors = {
 
 for _, row in tech_mix.iterrows():
 
-fig_tech.add_trace(
-    go.Bar(
-        y=["Technology Mix"],
-        x=[row["Share"]],
-        name=row["Technology"],
-        orientation="h",
-        marker_color=tech_colors.get(
-            row["Technology"],
-            "#7f7f7f"
-        ),
-        text=(
-            f"{row['Technology']}<br>"
-            f"{row['Share']:.1f}%"
-        ),
-        textposition="inside",
-        textfont=dict(
-            color="white",
-            size=12
+    fig_tech.add_trace(
+        go.Bar(
+            y=[""],
+            x=[row["Share"]],
+            name=row["Technology"],
+            orientation="h",
+            marker_color=tech_colors.get(
+                row["Technology"],
+                "#7f7f7f"
+            ),
+            text=(
+                f"{row['Technology']}<br>"
+                f"{row['Share']:.1f}%"
+            ),
+            textposition="inside",
+            textfont=dict(
+                color="white",
+                size=12
+            )
         )
     )
-)
 
 fig_tech.update_layout(
     barmode="stack",
-    height=140,
+    height=110,
     margin=dict(
         l=20,
         r=20,
@@ -540,6 +540,17 @@ fig_tech.update_layout(
     yaxis_title="",
     showlegend=False
 )
+
+tech_order = [
+    "Diesel",
+    "Thermal",
+    "Bunker",
+    "Other"
+]
+
+heat_tech = heat_tech.reindex(
+    tech_order
+).fillna(0)
 
 st.plotly_chart(
     fig_tech,
@@ -589,6 +600,16 @@ month_order = (
     [["MonthLabel","MonthDate"]]
     .drop_duplicates()
     .sort_values("MonthDate")
+)
+
+heat_tech = (
+    tech_month
+    .pivot(
+        index="Technology",
+        columns="MonthLabel",
+        values="Share"
+    )
+    .fillna(0)
 )
 
 heat_tech = heat_tech[
@@ -1625,10 +1646,12 @@ r3.metric(
 )
 
 r4.metric(
-    "Hours < 5 MW",
-    (gap_df["ReserveMargin"] < 5).sum()
+    "Hours Below 10% Reserve",
+    (
+        gap_df["ReserveMargin"]
+        < gap_df["RequiredReserve"]
+    ).sum()
 )
-
 r5.metric(
     "Hours < 0 MW",
     (gap_df["ReserveMargin"] < 0).sum()
