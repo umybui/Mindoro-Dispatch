@@ -444,25 +444,35 @@ def get_technology(plant):
 
     plant = str(plant).upper()
 
-    if "SOLAR" in plant:
-        return "Solar"
-
+    # Bunker
     if any(
         x in plant
         for x in [
-            "HYDRO",
-            "HPP",
-            "MHP",
-            "MHPP",
-            "HEPP"
+            "E-DELTA",
+            "ABORLAN"
         ]
     ):
-        return "Hydro"
+        return "Bunker"
 
-    if "BESS" in plant:
-        return "Battery"
+    # Thermal
+    if "NARRA" in plant:
+        return "Thermal"
 
-    return "Conventional"
+    # Diesel
+    if any(
+        x in plant
+        for x in [
+            "T-DELTA",
+            "QUEZON",
+            "IRAWAN",
+            "EPSA",
+            "RIO TUBA",
+            "VPOWER"
+        ]
+    ):
+        return "Diesel"
+
+    return "Other"
 
 generation["Technology"] = (
     generation["Plant"]
@@ -470,12 +480,11 @@ generation["Technology"] = (
 )
 
 tech_mix = (
-    generation
-    .groupby(
-        "Technology",
-        as_index=False
-    )["Value"]
-    .sum()
+    tech_mix
+    .sort_values(
+        "Share",
+        ascending=False
+    )
 )
 
 tech_mix["Share"] = (
@@ -491,7 +500,7 @@ for _, row in tech_mix.iterrows():
 
     fig_tech.add_trace(
         go.Bar(
-            y=["Generation Mix"],
+            y=["Generation Mix by Technology (Energy Basis)"],
             x=[row["Share"]],
             name=row["Technology"],
             orientation="h",
