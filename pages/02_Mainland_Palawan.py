@@ -444,26 +444,33 @@ def get_technology(plant):
 
     plant = str(plant).upper()
 
-    if plant in [
-        "e-DELTA P",
-        "DMCI ABORLAN"
-    ]:
+    # Bunker
+    if (
+        "DELTA" in plant
+        and "E" in plant
+    ) or "ABORLAN" in plant:
         return "Bunker"
 
-    if plant == "DMCI NARRA":
+    # Thermal
+    if "NARRA" in plant:
         return "Thermal"
 
-    if plant in [
-        "tDELTA P",
-        "DMCI QUEZON",
-        "DMCI IRAWAN EPSA",
-        "DMCI RIO TUBA",
-        "VPOWER"
-    ]:
+    # Diesel
+    if any(
+        x in plant
+        for x in [
+            "TDELTA",
+            "T-DELTA",
+            "QUEZON",
+            "IRAWAN",
+            "EPSA",
+            "RIO TUBA",
+            "VPOWER"
+        ]
+    ):
         return "Diesel"
 
     return "Other"
-
 
 generation["Technology"] = (
     generation["Plant"]
@@ -652,7 +659,9 @@ st.dataframe(
         ["Plant","Technology"]
     ]
     .drop_duplicates()
-    .sort
+    .sort_values("Plant"),
+    use_container_width=True
+)
 
 with st.expander(
     "View Monthly Technology Share Matrix (%)",
