@@ -342,36 +342,33 @@ generated_energy_mwh = (
     .sum()
 )
 
-average_load = (
+demand_energy_mwh = (
     total_demand["Value"]
-    .mean()
+    .sum()
 )
 
-load_factor = (
-    average_load
-    / peak_demand
+generated_energy_mwh = (
+    total_generation["TotalGeneration"]
+    .sum()
+)
+
+energy_served_pct = (
+    (
+        demand_energy_mwh
+        - unserved_energy
+    )
+    /
+    demand_energy_mwh
     * 100
+    if demand_energy_mwh > 0
+    else 0
 )
-
-# Philippine small-grid reserve criterion
-gap_df["RequiredReserve"] = (
-    gap_df["TotalGeneration"] * 0.10
-)
-
-hours_low_reserve = (
-    gap_df["ReserveMargin"]
-    < gap_df["RequiredReserve"]
-).sum()
 
 # =====================================================
 # KPI DISPLAY
 # =====================================================
 
-# =====================================================
-# KPI DISPLAY
-# =====================================================
-
-r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns(5)
+r1c1, r1c2, r1c3, r1c4, r1c5, r1c6 = st.columns(6)
 
 with r1c1:
     st.metric(
@@ -401,6 +398,12 @@ with r1c5:
     st.metric(
         "Unserved Energy",
         f"{unserved_energy:,.2f} MWh"
+    )
+
+with r1c6:
+    st.metric(
+        "Energy Served",
+        f"{energy_served_pct:.2f}%"
     )
 
 r2c1, r2c2, r2c3, r2c4 = st.columns(4)
