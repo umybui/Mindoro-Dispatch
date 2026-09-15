@@ -337,11 +337,6 @@ peak_generation_mw = (
     .max()
 )
 
-generated_energy_mwh = (
-    generation["Value"]
-    .sum()
-)
-
 demand_energy_mwh = (
     total_demand["Value"]
     .sum()
@@ -364,11 +359,19 @@ energy_served_pct = (
     else 0
 )
 
+average_load = total_demand["Value"].mean()
+
+load_factor = (
+    average_load
+    / peak_demand
+    * 100
+)
+
 # =====================================================
 # KPI DISPLAY
 # =====================================================
 
-r1c1, r1c2, r1c3, r1c4, r1c5, r1c6 = st.columns(6)
+r1c1, r1c2, r1c3, r1c4, r1c5 = st.columns(5)
 
 with r1c1:
     st.metric(
@@ -378,29 +381,23 @@ with r1c1:
 
 with r1c2:
     st.metric(
-        "Peak Generation",
-        f"{peak_generation_mw:,.2f} MW"
-    )
-
-with r1c3:
-    st.metric(
         "Demand Energy",
         f"{demand_energy_mwh:,.2f} MWh"
     )
 
-with r1c4:
+with r1c3:
     st.metric(
         "Generated Energy",
         f"{generated_energy_mwh:,.2f} MWh"
     )
 
-with r1c5:
+with r1c4:
     st.metric(
         "Unserved Energy",
         f"{unserved_energy:,.2f} MWh"
     )
 
-with r1c6:
+with r1c5:
     st.metric(
         "Energy Served",
         f"{energy_served_pct:.2f}%"
@@ -1123,14 +1120,6 @@ with b2:
         fig_hour,
         use_container_width=True
     )
-
-average_load = total_demand["Value"].mean()
-
-load_factor = (
-    average_load
-    / peak_demand
-    * 100
-)
 
 st.subheader(
     "Hour-Date Demand Heatmap (% of Peak Demand)"
