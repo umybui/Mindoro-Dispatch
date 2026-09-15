@@ -541,6 +541,16 @@ fig_tech.update_layout(
     showlegend=False
 )
 
+heat_tech = (
+    tech_month
+    .pivot(
+        index="Technology",
+        columns="MonthLabel",
+        values="Share"
+    )
+    .fillna(0)
+)
+
 tech_order = [
     "Diesel",
     "Thermal",
@@ -548,9 +558,11 @@ tech_order = [
     "Other"
 ]
 
-heat_tech = heat_tech.reindex(
-    tech_order
-).fillna(0)
+heat_tech = (
+    heat_tech
+    .reindex(tech_order)
+    .fillna(0)
+)
 
 st.plotly_chart(
     fig_tech,
@@ -589,19 +601,6 @@ tech_month["Share"] = (
     * 100
 )
 
-month_order = (
-    generation
-    .assign(
-        MonthDate=
-        generation["Datetime"]
-        .dt.to_period("M")
-        .dt.to_timestamp()
-    )
-    [["MonthLabel","MonthDate"]]
-    .drop_duplicates()
-    .sort_values("MonthDate")
-)
-
 heat_tech = (
     tech_month
     .pivot(
@@ -610,6 +609,32 @@ heat_tech = (
         values="Share"
     )
     .fillna(0)
+)
+
+tech_order = [
+    "Diesel",
+    "Thermal",
+    "Bunker",
+    "Other"
+]
+
+heat_tech = (
+    heat_tech
+    .reindex(tech_order)
+    .fillna(0)
+)
+
+month_order = (
+    generation
+    .assign(
+        MonthDate=
+        generation["Datetime"]
+        .dt.to_period("M")
+        .dt.to_timestamp()
+    )
+    [["MonthLabel", "MonthDate"]]
+    .drop_duplicates()
+    .sort_values("MonthDate")
 )
 
 heat_tech = heat_tech[
@@ -631,6 +656,11 @@ fig_tech_heat = go.Figure(
 fig_tech_heat.update_layout(
     title="Monthly Generation Share by Technology",
     height=300
+)
+
+st.plotly_chart(
+    fig_tech_heat,
+    use_container_width=True
 )
 
 st.plotly_chart(
@@ -683,12 +713,15 @@ monthly_summary = (
             ).sum()
         ),
 
+        gap_df["LowReserveFlag"] = (
+            gap_df["ReserveMargin"]
+            < gap_df["RequiredReserve"]
+        )
+        
         LowReserveHours=(
-            "ReserveMargin",
-            lambda x: (
-                x < 5
-            ).sum()
-        ),
+            "LowReserveFlag",
+            "sum"
+        )
 
         UnservedEnergy=(
             "ShortageMW",
