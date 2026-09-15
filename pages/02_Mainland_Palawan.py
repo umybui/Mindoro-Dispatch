@@ -478,6 +478,27 @@ generation["Technology"] = (
     .apply(get_technology)
 )
 
+plant_mix = (
+    generation
+    .groupby(
+        ["Technology","Plant"],
+        as_index=False
+    )["Value"]
+    .sum()
+)
+
+plant_mix["Share"] = (
+    plant_mix["Value"]
+    /
+    plant_mix["Value"].sum()
+    * 100
+)
+
+show_breakdown = st.toggle(
+    "Break down by power plant",
+    value=False
+)
+
 # -----------------------------------------------------
 # OVERALL TECHNOLOGY MIX
 # -----------------------------------------------------
@@ -553,6 +574,11 @@ fig_tech.update_layout(
 st.plotly_chart(
     fig_tech,
     use_container_width=True
+)
+
+show_breakdown = st.checkbox(
+    "Show Plant Breakdown by Technology",
+    value=False
 )
 
 # -----------------------------------------------------
@@ -652,15 +678,6 @@ fig_tech_heat.update_layout(
 
 st.plotly_chart(
     fig_tech_heat,
-    use_container_width=True
-)
-
-st.dataframe(
-    generation[
-        ["Plant","Technology"]
-    ]
-    .drop_duplicates()
-    .sort_values("Plant"),
     use_container_width=True
 )
 
