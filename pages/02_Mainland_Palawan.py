@@ -724,19 +724,27 @@ else:
             )
 
     fig_plant_mix.update_layout(
-        barmode="stack",
-        height=MIX_HEIGHT,
-        margin=dict(
-            l=20,
-            r=20,
-            t=60,
-            b=40
-        ),
-        xaxis_title="Share of Generated Energy (%)",
-        yaxis_title="",
-        showlegend=True,
-        legend_title="Power Plant"
-    )
+    barmode="stack",
+    height=MIX_HEIGHT,
+    margin=dict(
+        l=20,
+        r=20,
+        t=60,
+        b=80
+    ),
+    xaxis_title="Share of Generated Energy (%)",
+    yaxis_title="",
+
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=-0.30,
+        xanchor="center",
+        x=0.5
+    ),
+
+    showlegend=False
+)
 
     st.plotly_chart(
         fig_plant_mix,
