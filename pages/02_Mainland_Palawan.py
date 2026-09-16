@@ -994,6 +994,272 @@ monthly_summary = (
     .sort_values("MonthDate")
 )
 
+# =====================================================
+# RELIABILITY HEALTH MONITOR
+# =====================================================
+
+st.subheader(
+    "Reliability Health Monitor"
+)
+
+# -----------------------------------------------------
+# SCORING WEIGHTS
+# -----------------------------------------------------
+
+st.markdown(
+    """
+    **Reliability Score Weighting**
+
+    Recommended Default:
+    - Unserved Energy = 50%
+    - Shortage Hours = 25%
+    - Low Reserve Hours = 25%
+    """
+)
+
+w1, w2, w3 = st.columns(3)
+
+with w1:
+    w_unserved = st.slider(
+        "Unserved Energy Weight (%)",
+        min_value=0,
+        max_value=100,
+        value=50
+    )
+
+with w2:
+    w_shortage = st.slider(
+        "Shortage Hours Weight (%)",
+        min_value=0,
+        max_value=100,
+        value=25
+    )
+
+with w3:
+    w_reserve = st.slider(
+        "Low Reserve Hours Weight (%)",
+        min_value=0,
+        max_value=100,
+        value=25
+    )
+
+total_weight = (
+    w_unserved
+    + w_shortage
+    + w_reserve
+)
+
+# -----------------------------------------------------
+# COMPONENT SCORES
+# -----------------------------------------------------
+
+max_ens_pct = max(
+    monthly_summary["EnergyNotServedPct"].max(),
+    0.0001
+)
+
+max_shortage_hours = max(
+    monthly_summary["HoursWithShortage"].max(),
+    1
+)
+
+monthly_summary["ENS_Score"] = (
+    100
+    -
+    (
+        monthly_summary["EnergyNotServedPct"]
+        / max_ens_pct
+        * 100
+    )
+)
+
+monthly_summary["Shortage_Score"] = (
+    100
+    -
+    (
+        monthly_summary["HoursWithShortage"]
+        / max_shortage_hours
+        * 100
+    )
+)
+
+monthly_summary["Reserve_Score"] = (
+    monthly_summary["ReserveAdequacyPct"]
+)
+
+# -----------------------------------------------------
+# RELIABILITY SCORE
+# -----------------------------------------------------
+
+monthly_summary["ReliabilityScore"] = (
+    (
+        monthly_summary["ENS_Score"]
+        * w_unserved
+    )
+    +
+    (
+        monthly_summary["Shortage_Score"]
+        * w_shortage
+    )
+    +
+    (
+        monthly_summary["Reserve_Score"]
+        * w_reserve
+    )
+) / total_weight
+
+# -----------------------------------------------------
+# TRAFFIC LIGHT STATUS
+# -----------------------------------------------------
+
+def get_status(score):
+
+    if score >= 85:
+        return "🟢"
+
+    elif score >= 70:
+        return "🟡"
+
+    elif score >= 50:
+        return "🟠"
+
+    return "🔴"
+
+monthly_summary["Status"] = (
+    monthly_summary["ReliabilityScore"]
+    .apply(get_status)
+)
+
+# -----------------------------------------------------
+# RELIABILITY STATUS CARD
+# -----------------------------------------------------
+
+latest = monthly_summary.iloc[-1]
+
+if len(monthly_summary) > 1:
+
+    previous = monthly_summary.iloc[-2]
+
+    trend = (
+        "▲ Improving"
+        if latest["ReliabilityScore"]
+        >
+        previous["ReliabilityScore"]
+        else
+        "▼ Deteriorating"
+    )
+
+else:
+
+    trend = "N/A"
+
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    st.metric(
+        "Reliability Score",
+        f"{latest['ReliabilityScore']:.0f}",
+        trend
+    )
+
+with c2:
+    st.metric(
+        "Unserved Energy",
+        f"{latest['UnservedEnergy']:,.1f} MWh"
+    )
+
+with c3:
+    st.metric(
+        "Reserve Adequacy",
+        f"{latest['ReserveAdequacyPct']:.1f}%"
+    )
+
+with c4:
+    st.metric(
+        "Low Reserve Hours",
+        f"{latest['LowReserveHours']:,.0f}"
+    )
+
+# -----------------------------------------------------
+# MONTHLY TRAFFIC LIGHT TIMELINE
+# -----------------------------------------------------
+
+timeline = "   ".join(
+    [
+        f"{m[:3]} {s}"
+        for m, s
+        in zip(
+            monthly_summary["MonthName"],
+            monthly_summary["Status"]
+        )
+    ]
+)
+
+st.markdown(
+    f"### {timeline}"
+)
+
+# -----------------------------------------------------
+# MONTHLY UNSERVED ENERGY TREND
+# -----------------------------------------------------
+
+fig_ue = go.Figure()
+
+fig_ue.add_trace(
+    go.Bar(
+        x=monthly_summary["MonthName"],
+        y=monthly_summary["UnservedEnergy"],
+        text=monthly_summary["UnservedEnergy"].round(1),
+        textposition="outside",
+        marker_color=monthly_summary[
+            "EnergyNotServedPct"
+        ]
+    )
+)
+
+fig_ue.update_layout(
+    title="Monthly Unserved Energy Trend",
+    xaxis_title="Month",
+    yaxis_title="Unserved Energy (MWh)",
+    height=450
+)
+
+st.plotly_chart(
+    fig_ue,
+    use_container_width=True
+)
+
+# -----------------------------------------------------
+# RESERVE ADEQUACY TREND
+# -----------------------------------------------------
+
+fig_reserve_health = go.Figure()
+
+fig_reserve_health.add_trace(
+    go.Scatter(
+        x=monthly_summary["MonthName"],
+        y=monthly_summary["ReserveAdequacyPct"],
+        mode="lines+markers",
+        line=dict(width=3)
+    )
+)
+
+fig_reserve_health.update_layout(
+    title="Monthly Reserve Adequacy",
+    xaxis_title="Month",
+    yaxis_title="Reserve Adequacy (%)",
+    height=450
+)
+
+st.plotly_chart(
+    fig_reserve_health,
+    use_container_width=True
+)
+
+# -----------------------------------------------------
+# DETAIL TABLE
+# -----------------------------------------------------
+
 monthly_display = (
     monthly_summary[
         [
@@ -1003,27 +1269,34 @@ monthly_display = (
             "MaxShortage",
             "HoursWithShortage",
             "LowReserveHours",
+            "ReserveAdequacyPct",
             "UnservedEnergy",
+            "EnergyNotServedPct",
+            "ReliabilityScore",
             "LoadFactor"
         ]
     ]
 )
 
-st.subheader(
-    "Monthly Reliability Overview"
-)
+with st.expander(
+    "Monthly Reliability Details",
+    expanded=False
+):
 
-st.dataframe(
-    monthly_display.round({
-        "PeakDemand": 2,
-        "AverageDemand": 2,
-        "MaxShortage": 2,
-        "UnservedEnergy": 2,
-        "LoadFactor": 1
-    }),
-    use_container_width=True,
-    hide_index=True
-)
+    st.dataframe(
+        monthly_display.round({
+            "PeakDemand": 2,
+            "AverageDemand": 2,
+            "MaxShortage": 2,
+            "ReserveAdequacyPct": 1,
+            "UnservedEnergy": 2,
+            "EnergyNotServedPct": 3,
+            "ReliabilityScore": 1,
+            "LoadFactor": 1
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
 
 # =====================================================
 # BOXPLOTS
