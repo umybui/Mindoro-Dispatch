@@ -1014,33 +1014,38 @@ st.markdown(
     - Unserved Energy = 50%
     - Shortage Hours = 25%
     - Low Reserve Hours = 25%
+
+    The three weights must total exactly 100%.
     """
 )
 
 w1, w2, w3 = st.columns(3)
 
 with w1:
-    w_unserved = st.slider(
+    w_unserved = st.number_input(
         "Unserved Energy Weight (%)",
         min_value=0,
         max_value=100,
-        value=50
+        value=50,
+        step=1
     )
 
 with w2:
-    w_shortage = st.slider(
+    w_shortage = st.number_input(
         "Shortage Hours Weight (%)",
         min_value=0,
         max_value=100,
-        value=25
+        value=25,
+        step=1
     )
 
 with w3:
-    w_reserve = st.slider(
+    w_reserve = st.number_input(
         "Low Reserve Hours Weight (%)",
         min_value=0,
         max_value=100,
-        value=25
+        value=25,
+        step=1
     )
 
 total_weight = (
@@ -1048,6 +1053,26 @@ total_weight = (
     + w_shortage
     + w_reserve
 )
+
+if total_weight == 100:
+
+    st.success(
+        "✓ Weight Total = 100%"
+    )
+
+else:
+
+    st.error(
+        f"""
+        Weight Total = {total_weight}%
+
+        Reliability score weights must total exactly 100%.
+        Please adjust the weights before continuing.
+        """
+    )
+
+    st.stop()
+
 
 # -----------------------------------------------------
 # COMPONENT SCORES
