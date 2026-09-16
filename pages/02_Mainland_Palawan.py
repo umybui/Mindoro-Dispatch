@@ -1088,6 +1088,76 @@ monthly_summary["Reserve_Score"] = (
 )
 
 # -----------------------------------------------------
+# RELIABILITY SCORE COMPONENTS
+# -----------------------------------------------------
+
+def score_unserved_energy_pct(x):
+
+    if x <= 0.10:
+        return 100
+
+    elif x <= 0.50:
+        return 80
+
+    elif x <= 1.00:
+        return 60
+
+    elif x <= 2.00:
+        return 40
+
+    return 20
+
+
+def score_shortage_hours(x):
+
+    if x == 0:
+        return 100
+
+    elif x <= 24:
+        return 80
+
+    elif x <= 100:
+        return 60
+
+    elif x <= 300:
+        return 40
+
+    return 20
+
+
+def score_reserve_adequacy(x):
+
+    if x >= 95:
+        return 100
+
+    elif x >= 90:
+        return 80
+
+    elif x >= 80:
+        return 60
+
+    elif x >= 70:
+        return 40
+
+    return 20
+
+
+monthly_summary["ENS_Score"] = (
+    monthly_summary["EnergyNotServedPct"]
+    .apply(score_unserved_energy_pct)
+)
+
+monthly_summary["Shortage_Score"] = (
+    monthly_summary["HoursWithShortage"]
+    .apply(score_shortage_hours)
+)
+
+monthly_summary["Reserve_Score"] = (
+    monthly_summary["ReserveAdequacyPct"]
+    .apply(score_reserve_adequacy)
+)
+
+# -----------------------------------------------------
 # RELIABILITY SCORE
 # -----------------------------------------------------
 
@@ -1106,7 +1176,7 @@ monthly_summary["ReliabilityScore"] = (
         monthly_summary["Reserve_Score"]
         * w_reserve
     )
-) / total_weight
+) / 100
 
 # -----------------------------------------------------
 # TRAFFIC LIGHT STATUS
@@ -1115,15 +1185,16 @@ monthly_summary["ReliabilityScore"] = (
 def get_status(score):
 
     if score >= 85:
-        return "🟢"
+        return "🟢 Excellent"
 
     elif score >= 70:
-        return "🟡"
+        return "🟡 Good"
 
     elif score >= 50:
-        return "🟠"
+        return "🟠 Fair"
 
-    return "🔴"
+    return "🔴 Poor"
+
 
 monthly_summary["Status"] = (
     monthly_summary["ReliabilityScore"]
@@ -1156,25 +1227,50 @@ else:
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
+
     st.metric(
         "Reliability Score",
         f"{latest['ReliabilityScore']:.0f}",
         trend
     )
 
+    st.caption(
+        latest["Status"]
+    )
+
 with c2:
+
     st.metric(
         "Unserved Energy",
         f"{latest['UnservedEnergy']:,.1f} MWh"
     )
 
+# Reserve Adequacy Rating
+if latest["ReserveAdequacyPct"] >= 95:
+    reserve_status = "🟢 Excellent"
+
+elif latest["ReserveAdequacyPct"] >= 90:
+    reserve_status = "🟡 Good"
+
+elif latest["ReserveAdequacyPct"] >= 80:
+    reserve_status = "🟠 Fair"
+
+else:
+    reserve_status = "🔴 Poor"
+
 with c3:
+
     st.metric(
         "Reserve Adequacy",
         f"{latest['ReserveAdequacyPct']:.1f}%"
     )
 
+    st.caption(
+        reserve_status
+    )
+
 with c4:
+
     st.metric(
         "Low Reserve Hours",
         f"{latest['LowReserveHours']:,.0f}"
@@ -1185,36 +1281,76 @@ with c4:
 # -----------------------------------------------------
 
 timeline = "   ".join(
+
     [
-        f"{m[:3]} {s}"
+        f"{m[:3]} {s.split()[0]}"
         for m, s
         in zip(
             monthly_summary["MonthName"],
             monthly_summary["Status"]
         )
     ]
+
 )
 
 st.markdown(
     f"### {timeline}"
 )
 
+st.caption(
+    """
+    Traffic Light Legend:
+
+    🟢 Excellent (Score ≥ 85) |
+    🟡 Good (70-84) |
+    🟠 Fair (50-69) |
+    🔴 Poor (<50)
+    """
+)
+
 # -----------------------------------------------------
 # MONTHLY UNSERVED ENERGY TREND
 # -----------------------------------------------------
 
+def get_bar_color(x):
+
+    if x <= 0.10:
+        return "#2E7D32"
+
+    elif x <= 0.50:
+        return "#FDD835"
+
+    elif x <= 2.00:
+        return "#FB8C00"
+
+    return "#C62828"
+
+
+monthly_summary["BarColor"] = (
+    monthly_summary["EnergyNotServedPct"]
+    .apply(get_bar_color)
+)
+
 fig_ue = go.Figure()
 
 fig_ue.add_trace(
+
     go.Bar(
         x=monthly_summary["MonthName"],
         y=monthly_summary["UnservedEnergy"],
         text=monthly_summary["UnservedEnergy"].round(1),
         textposition="outside",
-        marker_color=monthly_summary[
+        marker_color=monthly_summary["BarColor"],
+        customdata=monthly_summary[
             "EnergyNotServedPct"
-        ]
+        ],
+        hovertemplate=
+            "<b>%{x}</b><br>"
+            "Unserved Energy: %{y:.2f} MWh<br>"
+            "Energy Not Served: %{customdata:.3f}%"
+            "<extra></extra>"
     )
+
 )
 
 fig_ue.update_layout(
@@ -1239,21 +1375,79 @@ fig_reserve_health.add_trace(
     go.Scatter(
         x=monthly_summary["MonthName"],
         y=monthly_summary["ReserveAdequacyPct"],
-        mode="lines+markers",
-        line=dict(width=3)
+        mode="lines+markers+text",
+        text=(
+            monthly_summary["ReserveAdequacyPct"]
+            .round(1)
+            .astype(str)
+            + "%"
+        ),
+        textposition="top center",
+        line=dict(
+            width=3,
+            color="#1f77b4"
+        ),
+        marker=dict(
+            size=8
+        ),
+        hovertemplate=
+            "<b>%{x}</b><br>"
+            "Reserve Adequacy: %{y:.1f}%"
+            "<extra></extra>"
     )
 )
 
+# Excellent threshold
+fig_reserve_health.add_hline(
+    y=95,
+    line_dash="dash",
+    line_color="green",
+    annotation_text="Excellent (95%)"
+)
+
+# Good threshold
+fig_reserve_health.add_hline(
+    y=90,
+    line_dash="dot",
+    line_color="gold",
+    annotation_text="Good (90%)"
+)
+
+# Fair threshold
+fig_reserve_health.add_hline(
+    y=80,
+    line_dash="dot",
+    line_color="orange",
+    annotation_text="Fair (80%)"
+)
+
 fig_reserve_health.update_layout(
-    title="Monthly Reserve Adequacy",
+    title="Monthly Reserve Adequacy Trend",
     xaxis_title="Month",
     yaxis_title="Reserve Adequacy (%)",
+    yaxis=dict(
+        range=[0, 100]
+    ),
     height=450
 )
 
 st.plotly_chart(
     fig_reserve_health,
     use_container_width=True
+)
+
+st.caption(
+    """
+    Reserve Adequacy Legend:
+
+    ≥95% = Excellent |
+    90-94.9% = Good |
+    80-89.9% = Fair |
+    <80% = Poor
+
+    Reserve Adequacy (%) =
+    (Hours Meeting Reserve Requirement ÷ Total Hours) × 100
+    """
 )
 
 # -----------------------------------------------------
