@@ -1008,13 +1008,6 @@ st.subheader(
 
 st.markdown(
     """
-    **Reliability Score Weighting**
-
-    Recommended Default:
-    - Unserved Energy = 50%
-    - Shortage Hours = 25%
-    - Low Reserve Hours = 25%
-
     The three weights must total exactly 100%.
     """
 )
