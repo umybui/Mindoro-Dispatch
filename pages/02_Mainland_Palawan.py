@@ -1207,31 +1207,13 @@ monthly_summary["Status"] = (
 
 latest = monthly_summary.iloc[-1]
 
-if len(monthly_summary) > 1:
-
-    previous = monthly_summary.iloc[-2]
-
-    trend = (
-        "▲ Improving"
-        if latest["ReliabilityScore"]
-        >
-        previous["ReliabilityScore"]
-        else
-        "▼ Deteriorating"
-    )
-
-else:
-
-    trend = "N/A"
-
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
 
     st.metric(
-        "Reliability Score",
-        f"{latest['ReliabilityScore']:.0f}",
-        trend
+    "Reliability Score",
+    f"{latest['ReliabilityScore']:.0f}"
     )
 
     st.caption(
