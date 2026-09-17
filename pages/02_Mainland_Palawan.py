@@ -2871,44 +2871,108 @@ shortage_events = pd.DataFrame(events)
 
 if len(shortage_events) > 0:
 
-    fig_shortage = go.Figure()
+    shortage_events["Month"] = (
+        pd.to_datetime(
+            shortage_events["Start"]
+        )
+        .dt.strftime("%b %Y")
+    )
 
-    fig_shortage.add_trace(
-        go.Bar(
-            y=[
-                f"Event {i+1}"
-                for i in range(len(shortage_events))
-            ],
-            x=shortage_events["Duration Hours"],
-            orientation="h",
-            text=shortage_events[
-                "Max Shortage MW"
-            ].round(2),
-            texttemplate="%{text} MW"
+    shortage_events = (
+        shortage_events
+        .sort_values(
+            "Unserved Energy MWh",
+            ascending=False
+        )
+        .reset_index(drop=True)
+    )
+
+    shortage_events.insert(
+        0,
+        "Event Number",
+        range(
+            1,
+            len(shortage_events) + 1
         )
     )
 
-    fig_shortage.update_layout(
-        title="Shortage Event Duration",
-        xaxis_title="Hours",
-        height=450
+    largest_event = (
+        shortage_events.iloc[0]
     )
 
-    st.plotly_chart(
-        fig_shortage,
-        use_container_width=True
+    longest_event = (
+        shortage_events.loc[
+            shortage_events[
+                "Duration Hours"
+            ].idxmax()
+        ]
     )
 
-with st.expander(
-    "View Shortage Event Data",
-    expanded=False
-):
-    st.dataframe(
-        shortage_events,
-        height=350,
-        use_container_width=True,
-        hide_index=True
+    highest_shortage = (
+        shortage_events.loc[
+            shortage_events[
+                "Max Shortage MW"
+            ].idxmax()
+        ]
     )
+
+    e1, e2, e3 = st.columns(3)
+
+    with e1:
+        st.metric(
+            "Largest Event",
+            f"{largest_event['Unserved Energy MWh']:,.2f} MWh"
+        )
+        st.caption(
+            f"{largest_event['Month']}"
+        )
+
+    with e2:
+        st.metric(
+            "Longest Event",
+            f"{longest_event['Duration Hours']:,.0f} hrs"
+        )
+        st.caption(
+            f"{longest_event['Month']}"
+        )
+
+    with e3:
+        st.metric(
+            "Highest Shortage",
+            f"{highest_shortage['Max Shortage MW']:,.2f} MW"
+        )
+        st.caption(
+            f"{highest_shortage['Month']}"
+        )
+
+    shortage_events_display = (
+        shortage_events[
+            [
+                "Event Number",
+                "Month",
+                "Start",
+                "End",
+                "Duration Hours",
+                "Max Shortage MW",
+                "Unserved Energy MWh"
+            ]
+        ]
+    )
+
+    with st.expander(
+        "View Shortage Event Data",
+        expanded=False
+    ):
+        st.dataframe(
+            shortage_events_display.round({
+                "Duration Hours": 0,
+                "Max Shortage MW": 2,
+                "Unserved Energy MWh": 2
+            }),
+            height=350,
+            use_container_width=True,
+            hide_index=True
+        )
 
 # =====================================================
 # Plant Contribution Analysis
