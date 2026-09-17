@@ -234,8 +234,20 @@ gap_df["ReserveMargin"] = (
     - gap_df["TotalDemand"]
 )
 
-gap_df["RequiredReserve"] = (
+# Reserve Requirement Components
+
+gap_df["RegulatingReserve"] = (
+    gap_df["TotalDemand"] * 0.028
+)
+
+gap_df["ContingencyReserve"] = (
     gap_df["TotalGeneration"] * 0.10
+)
+
+gap_df["RequiredReserve"] = (
+    gap_df["RegulatingReserve"]
+    +
+    gap_df["ContingencyReserve"]
 )
 
 peak_demand = gap_df["TotalDemand"].max()
@@ -438,12 +450,24 @@ with r2c4:
 
 st.caption(
     """
-    Hours with Shortage = hours where Total Demand exceeded
-    Total Supply by at least 0.01 MW.
+    This assessment focuses on hours where customer
+    demand was successfully served.
 
-    Low Reserve Hours = hours where Reserve Margin was less
-    than the required operating reserve equivalent to 10% of
-    synchronized generation capacity.
+    Reserve adequacy is evaluated against the operating
+    reserve requirement consisting of:
+
+    • 2.8% Regulating / Load-Following Reserve based on
+      Total System Demand
+
+    • 10% Contingency Reserve based on Total
+      Synchronized Generation
+
+    Total Required Reserve =
+    Regulating Reserve + Contingency Reserve
+
+    Hours with unserved demand are excluded from this
+    assessment and are reported separately in the
+    Reliability Health Monitor.
     """
 )
 
@@ -2439,6 +2463,45 @@ st.caption(
     Reliability Health Monitor.
     """
 )
+
+# ----------------------------------
+# AVERAGE RESERVE REQUIREMENTS
+# ----------------------------------
+
+avg_regulating = (
+    gap_df["RegulatingReserve"]
+    .mean()
+)
+
+avg_contingency = (
+    gap_df["ContingencyReserve"]
+    .mean()
+)
+
+avg_required = (
+    gap_df["RequiredReserve"]
+    .mean()
+)
+
+r1, r2, r3 = st.columns(3)
+
+with r1:
+    st.metric(
+        "Avg Regulating Reserve",
+        f"{avg_regulating:.2f} MW"
+    )
+
+with r2:
+    st.metric(
+        "Avg Contingency Reserve",
+        f"{avg_contingency:.2f} MW"
+    )
+
+with r3:
+    st.metric(
+        "Avg Total Required Reserve",
+        f"{avg_required:.2f} MW"
+    )
 
 # ----------------------------------
 # STUDY PERIOD SUMMARY
