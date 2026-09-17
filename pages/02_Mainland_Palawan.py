@@ -2503,6 +2503,193 @@ with k4:
     )
 
 # ----------------------------------
+# OPERATING CONDITION BREAKDOWN
+# ----------------------------------
+
+adequate_hours = hours_meeting_reserve
+
+reserve_deficient_hours = hours_below_reserve
+
+fig_reserve_breakdown = go.Figure()
+
+fig_reserve_breakdown.add_trace(
+    go.Bar(
+        y=["Study Period"],
+        x=[adequate_hours],
+        name="Adequate Reserve",
+        orientation="h",
+        marker_color="green",
+        text=[
+            f"{adequate_hours:,}"
+        ],
+        textposition="inside"
+    )
+)
+
+fig_reserve_breakdown.add_trace(
+    go.Bar(
+        y=["Study Period"],
+        x=[reserve_deficient_hours],
+        name="Reserve Deficient",
+        orientation="h",
+        marker_color="orange",
+        text=[
+            f"{reserve_deficient_hours:,}"
+        ],
+        textposition="inside"
+    )
+)
+
+fig_reserve_breakdown.add_trace(
+    go.Bar(
+        y=["Study Period"],
+        x=[unserved_hours],
+        name="Unserved Demand",
+        orientation="h",
+        marker_color="red",
+        text=[
+            f"{unserved_hours:,}"
+        ],
+        textposition="inside"
+    )
+)
+
+fig_reserve_breakdown.update_layout(
+    title="Operating Condition Breakdown",
+    barmode="stack",
+    xaxis_title="Hours",
+    height=350
+)
+
+st.plotly_chart(
+    fig_reserve_breakdown,
+    use_container_width=True
+)
+
+# ----------------------------------
+# MONTHLY RESERVE COMPLIANCE TREND
+# ----------------------------------
+
+reserve_monthly = gap_df.copy()
+
+reserve_monthly["Month"] = (
+    reserve_monthly["Datetime"]
+    .dt.to_period("M")
+    .dt.to_timestamp()
+)
+
+reserve_monthly["MonthLabel"] = (
+    reserve_monthly["Datetime"]
+    .dt.strftime("%b %Y")
+)
+
+reserve_monthly["ServedFlag"] = (
+    reserve_monthly["ShortageMW"]
+    < SHORTAGE_THRESHOLD
+)
+
+reserve_monthly["ReserveCompliant"] = (
+    (
+        reserve_monthly["ReserveMargin"]
+        >= reserve_monthly["RequiredReserve"]
+    )
+    &
+    reserve_monthly["ServedFlag"]
+)
+
+monthly_reserve = (
+    reserve_monthly
+    .groupby(
+        ["Month", "MonthLabel"],
+        as_index=False
+    )
+    .agg(
+        ServedHours=(
+            "ServedFlag",
+            "sum"
+        ),
+        CompliantHours=(
+            "ReserveCompliant",
+            "sum"
+        )
+    )
+)
+
+monthly_reserve["ReserveCompliancePct"] = (
+    monthly_reserve["CompliantHours"]
+    /
+    monthly_reserve["ServedHours"]
+    .replace(0, pd.NA)
+    * 100
+)
+
+monthly_reserve = (
+    monthly_reserve
+    .sort_values("Month")
+)
+
+fig_reserve_trend = go.Figure()
+
+fig_reserve_trend.add_trace(
+    go.Scatter(
+        x=monthly_reserve["MonthLabel"],
+        y=monthly_reserve[
+            "ReserveCompliancePct"
+        ],
+        mode="lines+markers+text",
+        text=(
+            monthly_reserve[
+                "ReserveCompliancePct"
+            ]
+            .round(1)
+            .astype(str)
+            + "%"
+        ),
+        textposition="top center",
+        line=dict(
+            width=3,
+            color="#1565C0"
+        )
+    )
+)
+
+fig_reserve_trend.add_hline(
+    y=95,
+    line_dash="dash",
+    line_color="green",
+    annotation_text="Excellent"
+)
+
+fig_reserve_trend.add_hline(
+    y=90,
+    line_dash="dot",
+    line_color="gold",
+    annotation_text="Good"
+)
+
+fig_reserve_trend.add_hline(
+    y=80,
+    line_dash="dot",
+    line_color="orange",
+    annotation_text="Fair"
+)
+
+fig_reserve_trend.update_layout(
+    title="Monthly Reserve Compliance Trend",
+    xaxis_title="Month",
+    yaxis_title="Reserve Compliance (%)",
+    yaxis=dict(
+        range=[0, 100]
+    ),
+    height=450
+)
+
+st.plotly_chart(
+    fig_reserve_trend,
+    use_container_width=True
+)
+
+# ----------------------------------
 # RESERVE DEFICIENT HOURS DETAIL
 # ----------------------------------
 
