@@ -1540,19 +1540,6 @@ import math
 # -----------------------------------------------------
 # COMMON Y-AXIS FOR BOTH BOXPLOTS
 # -----------------------------------------------------
-#
-# Use a common Y-axis for the monthly and hourly boxplots
-# so demand variability can be compared directly.
-#
-# Axis limits are based on the 1st and 99th percentiles
-# rather than the absolute minimum and maximum values.
-# This prevents isolated low-demand outliers (e.g.,
-# outages, missing data, abnormal system events) from
-# forcing the axis down to zero while still allowing
-# those outliers to appear in the boxplots.
-#
-# The scale automatically adjusts to the dataset being
-# analyzed, making it applicable to any island/system.
 
 import math
 
@@ -1665,6 +1652,18 @@ with b2:
         fig_hour,
         use_container_width=True
     )
+
+st.caption(
+    """
+    Interpretation:
+    The box-and-whisker plots summarize demand variability from two perspectives.
+    Daily Peak Demand by Month shows how the daily system peak changes over time,
+    highlighting seasonal patterns and peak-demand growth. Hourly Demand
+    Distribution shows typical demand behavior by hour of day, revealing load
+    patterns, peak periods, and variability. Both charts use a common MW scale
+    to enable direct visual comparison across months and hours.
+    """
+)
 
 # =====================================================
 # Heatmap
