@@ -1537,14 +1537,33 @@ hourly_profile["Hour"] = (
 # -----------------------------------------------------
 import math
 
+# -----------------------------------------------------
+# COMMON Y-AXIS FOR BOTH BOXPLOTS
+# -----------------------------------------------------
+#
+# Use a common Y-axis for the monthly and hourly boxplots
+# so demand variability can be compared directly.
+#
+# Axis limits are based on the 1st and 99th percentiles
+# rather than the absolute minimum and maximum values.
+# This prevents isolated low-demand outliers (e.g.,
+# outages, missing data, abnormal system events) from
+# forcing the axis down to zero while still allowing
+# those outliers to appear in the boxplots.
+#
+# The scale automatically adjusts to the dataset being
+# analyzed, making it applicable to any island/system.
+
+import math
+
 common_min = min(
-    daily_peak["DailyPeak"].min(),
-    hourly_profile["Value"].min()
+    daily_peak["DailyPeak"].quantile(0.01),
+    hourly_profile["Value"].quantile(0.01)
 )
 
 common_max = max(
-    daily_peak["DailyPeak"].max(),
-    hourly_profile["Value"].max()
+    daily_peak["DailyPeak"].quantile(0.99),
+    hourly_profile["Value"].quantile(0.99)
 )
 
 # Dynamic limits based on actual dataset
