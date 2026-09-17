@@ -1504,7 +1504,9 @@ b1, b2 = st.columns(2)
 # CHART
 # =====================================================
 
-fig = go.Figure()
+# =====================================================
+# CHART
+# =====================================================
 
 daily_peak = (
     total_demand.assign(
@@ -1522,6 +1524,51 @@ month_order = [
     "May", "Jun", "Jul", "Aug",
     "Sep", "Oct", "Nov", "Dec"
 ]
+
+hourly_profile = total_demand.copy()
+
+hourly_profile["Hour"] = (
+    hourly_profile["Datetime"]
+    .dt.hour
+)
+
+# -----------------------------------------------------
+# COMMON Y-AXIS FOR BOTH BOXPLOTS
+# -----------------------------------------------------
+import math
+
+common_min = min(
+    daily_peak["DailyPeak"].min(),
+    hourly_profile["Value"].min()
+)
+
+common_max = max(
+    daily_peak["DailyPeak"].max(),
+    hourly_profile["Value"].max()
+)
+
+# Dynamic limits based on actual dataset
+y_min = math.floor(common_min / 5) * 5
+y_max = math.ceil(common_max / 5) * 5
+
+# Dynamic tick interval
+y_range = y_max - y_min
+
+if y_range <= 50:
+    y_tick = 5
+
+elif y_range <= 100:
+    y_tick = 10
+
+elif y_range <= 200:
+    y_tick = 20
+
+else:
+    y_tick = math.ceil(y_range / 10 / 5) * 5
+    
+# -----------------------------------------------------
+# DAILY PEAK DEMAND BY MONTH
+# -----------------------------------------------------
 
 fig_peak = go.Figure()
 
@@ -1548,18 +1595,20 @@ fig_peak.update_layout(
     height=450
 )
 
+fig_peak.update_yaxes(
+    range=[y_min, y_max],
+    dtick=y_tick
+)
+
 with b1:
     st.plotly_chart(
         fig_peak,
         use_container_width=True
     )
 
-hourly_profile = total_demand.copy()
-
-hourly_profile["Hour"] = (
-    hourly_profile["Datetime"]
-    .dt.hour
-)
+# -----------------------------------------------------
+# HOURLY DEMAND DISTRIBUTION
+# -----------------------------------------------------
 
 fig_hour = go.Figure()
 
@@ -1587,11 +1636,20 @@ fig_hour.update_layout(
     height=450
 )
 
+fig_hour.update_yaxes(
+    range=[y_min, y_max],
+    dtick=y_tick
+)
+
 with b2:
     st.plotly_chart(
         fig_hour,
         use_container_width=True
     )
+
+# =====================================================
+# Heatmap
+# =====================================================
 
 st.subheader(
     "Hour-Date Demand Heatmap (% of Peak Demand)"
