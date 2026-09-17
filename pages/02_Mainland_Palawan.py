@@ -1655,7 +1655,6 @@ with b2:
 
 st.caption(
     """
-    Interpretation:
     The box-and-whisker plots summarize demand variability from two perspectives.
     Daily Peak Demand by Month shows how the daily system peak changes over time,
     highlighting seasonal patterns and peak-demand growth. Hourly Demand
@@ -2365,70 +2364,203 @@ st.dataframe(
     hide_index=True
 )
 
-st.subheader("Reserve Margin Analysis")
+# ----------------------------------
+# RESERVE SECURITY ASSESSMENT
+# ----------------------------------
 
-reserve_curve = (
-    gap_df["ReserveMargin"]
-    .sort_values(ascending=False)
-    .reset_index(drop=True)
+st.subheader(
+    "Reserve Security Assessment"
 )
 
-reserve_pct = (
-    (reserve_curve.index + 1)
-    / len(reserve_curve)
+total_hours = len(gap_df)
+
+unserved_hours = (
+    gap_df["ShortageMW"]
+    >= SHORTAGE_THRESHOLD
+).sum()
+
+served_hours = (
+    total_hours
+    - unserved_hours
+)
+
+served_pct = (
+    served_hours
+    / total_hours
     * 100
 )
 
-fig_reserve = go.Figure()
+served_df = gap_df[
+    gap_df["ShortageMW"]
+    < SHORTAGE_THRESHOLD
+].copy()
 
-fig_reserve.add_trace(
-    go.Scatter(
-        x=reserve_pct,
-        y=reserve_curve,
-        mode="lines",
-        name="Reserve Margin"
+hours_meeting_reserve = (
+    served_df["ReserveMargin"]
+    >= served_df["RequiredReserve"]
+).sum()
+
+hours_below_reserve = (
+    served_df["ReserveMargin"]
+    < served_df["RequiredReserve"]
+).sum()
+
+reserve_compliance_pct = (
+    hours_meeting_reserve
+    / max(served_hours, 1)
+    * 100
+)
+
+worst_reserve_deficiency = (
+    served_df["ReserveMargin"]
+    -
+    served_df["RequiredReserve"]
+).min()
+
+# ----------------------------------
+# DESCRIPTION
+# ----------------------------------
+
+st.caption(
+    """
+    This assessment focuses on hours where customer
+    demand was successfully served.
+
+    Reserve adequacy is evaluated against the operating
+    reserve requirement consisting of:
+
+    • 2.8% Regulating / Load-Following Reserve
+
+    • 10% Contingency Reserve based on Total
+      Synchronized Generation
+
+    Hours with unserved demand are excluded from this
+    assessment and are reported separately in the
+    Reliability Health Monitor.
+    """
+)
+
+# ----------------------------------
+# STUDY PERIOD SUMMARY
+# ----------------------------------
+
+s1, s2, s3, s4 = st.columns(4)
+
+with s1:
+    st.metric(
+        "Hours Evaluated",
+        f"{total_hours:,.0f}"
+    )
+
+with s2:
+    st.metric(
+        "Unserved Hours",
+        f"{unserved_hours:,.0f}"
+    )
+
+with s3:
+    st.metric(
+        "Demand Served Hours",
+        f"{served_hours:,.0f}"
+    )
+
+with s4:
+    st.metric(
+        "Served Hours %",
+        f"{served_pct:.1f}%"
+    )
+
+st.markdown("---")
+
+# ----------------------------------
+# RESERVE SECURITY KPI
+# ----------------------------------
+
+k1, k2, k3, k4 = st.columns(4)
+
+with k1:
+    st.metric(
+        "Reserve Compliance",
+        f"{reserve_compliance_pct:.1f}%"
+    )
+
+with k2:
+    st.metric(
+        "Hours Meeting Requirement",
+        f"{hours_meeting_reserve:,.0f}"
+    )
+
+with k3:
+    st.metric(
+        "Hours Below Requirement"
+
+# ----------------------------------
+# RESERVE DEFICIENT HOURS DETAIL
+# ----------------------------------
+
+reserve_detail = served_df[
+    served_df["ReserveMargin"]
+    < served_df["RequiredReserve"]
+].copy()
+
+reserve_detail["ReserveDeficiency"] = (
+    reserve_detail["ReserveMargin"]
+    -
+    reserve_detail["RequiredReserve"]
+)
+
+# Worst reserve violations first
+reserve_detail = (
+    reserve_detail
+    .sort_values(
+        "ReserveDeficiency",
+        ascending=True
+    )
+    .reset_index(drop=True)
+)
+
+# Add ranking
+reserve_detail.insert(
+    0,
+    "Rank",
+    range(
+        1,
+        len(reserve_detail) + 1
     )
 )
 
-fig_reserve.add_hline(
-    y=5,
-    line_dash="dash",
-    annotation_text="5 MW Threshold"
-)
+reserve_detail = reserve_detail[
+    [
+        "Rank",
+        "Datetime",
+        "TotalDemand",
+        "TotalSupply",
+        "ReserveMargin",
+        "RequiredReserve",
+        "ReserveDeficiency"
+    ]
+]
 
-st.plotly_chart(
-    fig_reserve,
-    use_container_width=True
-)
+with st.expander(
+    "View Reserve Deficient Hours",
+    expanded=False
+):
 
-r1,r2,r3,r4,r5 = st.columns(5)
+    st.dataframe(
+        reserve_detail.round({
+            "TotalDemand": 2,
+            "TotalSupply": 2,
+            "ReserveMargin": 2,
+            "RequiredReserve": 2,
+            "ReserveDeficiency": 2
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
 
-r1.metric(
-    "Minimum Reserve",
-    f"{gap_df['ReserveMargin'].min():,.2f}"
-)
-
-r2.metric(
-    "Median Reserve",
-    f"{gap_df['ReserveMargin'].median():,.2f}"
-)
-
-r3.metric(
-    "P10 Reserve",
-    f"{gap_df['ReserveMargin'].quantile(.10):,.2f}"
-)
-
-r4.metric(
-    "Hours Below 10% Reserve",
-    (
-        gap_df["ReserveMargin"]
-        < gap_df["RequiredReserve"]
-    ).sum()
-)
-r5.metric(
-    "Hours < 0 MW",
-    (gap_df["ReserveMargin"] < 0).sum()
-)
+# ----------------------------------
+# Shortage Event Analysis
+# ----------------------------------
 
 st.subheader("Shortage Event Analysis")
 
@@ -2582,6 +2714,10 @@ with st.expander(
         use_container_width=True,
         hide_index=True
     )
+
+# =====================================================
+# Plant Contribution Analysis
+# =====================================================
 
 st.subheader("Plant Contribution Analysis")
 
