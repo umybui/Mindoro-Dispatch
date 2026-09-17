@@ -2492,7 +2492,15 @@ with k2:
 
 with k3:
     st.metric(
-        "Hours Below Requirement"
+        "Hours Below Requirement",
+        f"{hours_below_reserve:,.0f}"
+    )
+
+with k4:
+    st.metric(
+        "Worst Reserve Deficiency",
+        f"{worst_reserve_deficiency:,.2f} MW"
+    )
 
 # ----------------------------------
 # RESERVE DEFICIENT HOURS DETAIL
