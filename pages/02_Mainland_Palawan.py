@@ -448,29 +448,6 @@ with r2c4:
         )
     )
 
-st.caption(
-    """
-    This assessment focuses on hours where customer
-    demand was successfully served.
-
-    Reserve adequacy is evaluated against the operating
-    reserve requirement consisting of:
-
-    • 2.8% Regulating / Load-Following Reserve based on
-      Total System Demand
-
-    • 10% Contingency Reserve based on Total
-      Synchronized Generation
-
-    Total Required Reserve =
-    Regulating Reserve + Contingency Reserve
-
-    Hours with unserved demand are excluded from this
-    assessment and are reported separately in the
-    Reliability Health Monitor.
-    """
-)
-
 # =====================================================
 # GENERATION MIX BY TECHNOLOGY
 # =====================================================
