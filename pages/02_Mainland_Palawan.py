@@ -3218,19 +3218,6 @@ peak_mix_display = (
     )
 )
 
-with st.expander(
-    "View Generation Mix at Peak Demand Data",
-    expanded=False
-):
-    st.dataframe(
-        peak_mix_display.round({
-            "Value": 2,
-            "Percent": 2
-        }),
-        use_container_width=True,
-        hide_index=True
-    )
-
 fig_peak_mix = go.Figure()
 
 fig_peak_mix.add_trace(
@@ -3253,6 +3240,19 @@ st.plotly_chart(
     fig_peak_mix,
     use_container_width=True
 )
+
+with st.expander(
+    "View Generation Mix at Peak Demand Data",
+    expanded=False
+):
+    st.dataframe(
+        peak_mix_display.round({
+            "Value": 2,
+            "Percent": 2
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
 
 # -----------------------------------------------------
 # CAPACITY DATA
@@ -3567,6 +3567,8 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
+
+fig = go.Figure()
 
 # -----------------------------------------------------
 # GENERATION STACK
