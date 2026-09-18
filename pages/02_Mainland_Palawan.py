@@ -1826,13 +1826,6 @@ else:
 
     ldc_seg = ldc.copy()
 
-boundaries, total_sse = (
-   optimal_ldc_segments(
-    ldc_seg.values,
-    num_segments
-)
-)
-
 # =====================================================
 # LDC SEGMENT CONTROLS
 # =====================================================
@@ -1895,8 +1888,7 @@ sse_df["Improvement"] = (
 
 sse_df["PctImprovement"] = (
     sse_df["Improvement"]
-    /
-    sse_df["SSE"].shift(1)
+    / sse_df["SSE"].shift(1)
     * 100
 )
 
@@ -1966,39 +1958,6 @@ boundaries, total_sse = (
         num_segments
     )
 )
-
-sse_df = pd.DataFrame(
-    sse_results
-)
-
-sse_df["Improvement"] = (
-    sse_df["SSE"].shift(1)
-    - sse_df["SSE"]
-)
-
-sse_df["PctImprovement"] = (
-    sse_df["Improvement"]
-    / sse_df["SSE"].shift(1)
-    * 100
-)
-
-recommended_segments = 4
-
-for i in range(2, len(sse_df)):
-
-    if (
-        sse_df.loc[i, "PctImprovement"]
-        < 10
-    ):
-        recommended_segments = (
-            int(
-                sse_df.loc[
-                    i - 1,
-                    "Segments"
-                ]
-            )
-        )
-        break
 
 segment_rows = []
 
