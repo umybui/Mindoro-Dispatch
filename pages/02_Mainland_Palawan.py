@@ -2573,24 +2573,29 @@ with st.expander(
 
         m1, m2, m3 = st.columns(3)
 
-        with m1:
+        inspect_df["MonthDate"] = (
+    inspect_df["Datetime"]
+    .dt.to_period("M")
+    .dt.to_timestamp()
+)
 
-            selected_month = st.selectbox(
-                "Month",
-                sorted(
-                    inspect_df["MonthLabel"].unique()
-                )
-            )
+month_options = (
+    inspect_df["MonthDate"]
+    .drop_duplicates()
+    .sort_values()
+)
 
-        month_df = inspect_df[
-            inspect_df["MonthLabel"]
-            == selected_month
-        ].copy()
+with m1:
 
-        month_df["DayLabel"] = (
-            month_df["Datetime"]
-            .dt.strftime("%Y-%m-%d")
-        )
+    selected_month = st.selectbox(
+        "Month",
+        month_options,
+        format_func=lambda x: x.strftime("%b %Y")
+    )
+
+month_df = inspect_df[
+    inspect_df["MonthDate"] == selected_month
+].copy()
 
         with m2:
 
