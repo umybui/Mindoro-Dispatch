@@ -1826,6 +1826,29 @@ else:
 
     ldc_seg = ldc.copy()
 
+st.caption("Load Segment Summary")
+
+c1, c2 = st.columns([1, 5])
+
+with c1:
+
+    num_segments = st.selectbox(
+        "Load Segments",
+        options=list(range(2, 9)),
+        index=2,   # 4 segments default
+        key="ldc_segments"
+    )
+
+with c2:
+
+    st.caption(
+        """
+        Increase segments for a more detailed representation
+        of the Load Duration Curve. Fewer segments provide
+        a simpler planning model.
+        """
+    )
+
 boundaries, total_sse = (
    optimal_ldc_segments(
     ldc_seg.values,
@@ -1967,29 +1990,6 @@ ldc_pct = (
     / len(ldc)
     * 100
 )
-
-st.caption("Load Segment Summary")
-
-c1, c2 = st.columns([1, 5])
-
-with c1:
-
-    num_segments = st.selectbox(
-        "Load Segments",
-        options=list(range(2, 9)),
-        index=2,   # 4 segments default
-        key="ldc_segments"
-    )
-
-with c2:
-
-    st.caption(
-        """
-        Increase segments for a more detailed representation
-        of the Load Duration Curve. Fewer segments provide
-        a simpler planning model.
-        """
-    )
 
 fig_elbow = go.Figure()
 
