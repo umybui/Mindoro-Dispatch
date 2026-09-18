@@ -3549,6 +3549,8 @@ with st.expander(
 # CAPACITY DATA
 # -----------------------------------------------------
 
+growth_rate = 3.0
+
 capacity_data = df[
     df["Attribute"]
     .astype(str)
@@ -3644,100 +3646,6 @@ removed_capacity_tbl = (
 # -----------------------------------------------------
 # OUTLOOK KPIs
 # -----------------------------------------------------
-
-scenario_text = (
-    ", ".join(retired_plants)
-    if len(retired_plants) > 0
-    else "Base Case"
-)
-
-st.subheader(
-    "Demand Growth & Capacity Outlook"
-)
-
-growth_rate = st.slider(
-    "Annual Demand Growth (%)",
-    min_value=0.0,
-    max_value=10.0,
-    value=3.0,
-    step=0.1
-)
-
-# Recalculate whenever slider changes
-
-projected_peak = (
-    peak_demand
-    * (1 + growth_rate / 100) ** planning_horizon
-)
-
-capacity_margin = (
-    available_capacity
-    - projected_peak
-)
-
-reserve_margin_pct = (
-    capacity_margin
-    / projected_peak
-    * 100
-)
-
-required_new_capacity = max(
-    projected_peak - available_capacity,
-    0
-)
-
-if reserve_margin_pct >= 20:
-    planning_risk = "Low Risk"
-
-elif reserve_margin_pct >= 10:
-    planning_risk = "Moderate Risk"
-
-elif reserve_margin_pct >= 0:
-    planning_risk = "High Risk"
-
-else:
-    planning_risk = "Capacity Deficit"
-
-st.caption(
-    f"Scenario: {scenario_text}"
-)
-
-f1, f2, f3, f4, f5 = st.columns(5)
-
-with f1:
-    st.metric(
-        "Current Peak Demand",
-        f"{peak_demand:,.2f} MW"
-    )
-
-with f2:
-    st.metric(
-        "Projected Peak Demand",
-        f"{projected_peak:,.2f} MW"
-    )
-
-with f3:
-    st.metric(
-        "Available Capacity",
-        f"{available_capacity:,.2f} MW"
-    )
-
-with f4:
-    st.metric(
-        "Removed Capacity",
-        f"{removed_capacity:,.2f} MW"
-    )
-
-with f5:
-    st.metric(
-        "Reserve Margin",
-        f"{reserve_margin_pct:.1f}%"
-    )
-
-st.metric(
-    "Additional Capacity Needed",
-    f"{required_new_capacity:,.2f} MW"
-)
 
 # -----------------------------------------------------
 # INTERPRETATION
