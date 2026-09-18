@@ -3549,8 +3549,6 @@ with st.expander(
 # CAPACITY DATA
 # -----------------------------------------------------
 
-growth_rate = 3.0
-
 capacity_data = df[
     df["Attribute"]
     .astype(str)
@@ -3575,14 +3573,6 @@ capacity_data["Attribute"] = (
 
 st.sidebar.subheader(
     "Capacity Scenario"
-)
-
-growth_rate = st.sidebar.slider(
-    "Annual Demand Growth (%)",
-    min_value=0.0,
-    max_value=10.0,
-    value=3.0,
-    step=0.1
 )
 
 retired_plants = st.sidebar.multiselect(
@@ -3634,20 +3624,23 @@ removed_capacity = (
     .sum()
 )
 
-removed_capacity_tbl = (
-    cap_check[
-        cap_check["Retired"]
-    ]
-    .groupby(
-        "Plant",
-        as_index=False
-    )
-    .agg(
-        RemovedMW=("DependableMW", "sum")
-    )
-    .sort_values(
-        "RemovedMW",
-        ascending=False
+# -----------------------------------------------------
+# CAPACITY PLANNING ASSUMPTION
+# -----------------------------------------------------
+
+st.subheader(
+    "Capacity Planning Assumptions"
+)
+
+growth_rate = st.slider(
+    "Economic Growth Assumption (%)",
+    min_value=0.0,
+    max_value=10.0,
+    value=3.0,
+    step=0.1,
+    help=(
+        "Used to project future peak demand "
+        "for long-term capacity planning."
     )
 )
 
@@ -3689,18 +3682,34 @@ else:
     planning_risk = "Capacity Deficit"
 
 st.subheader(
-    "Demand Growth & Capacity Outlook"
+    f"Capacity Outlook @ {growth_rate:.1f}% Economic Growth"
 )
 
-st.metric(
-    "Projected Peak Demand",
-    f"{projected_peak:,.2f} MW"
-)
+c1, c2, c3, c4 = st.columns(4)
 
-st.metric(
-    "Additional Capacity Needed",
-    f"{required_new_capacity:,.2f} MW"
-)
+with c1:
+    st.metric(
+        "Current Peak Demand",
+        f"{peak_demand:,.2f} MW"
+    )
+
+with c2:
+    st.metric(
+        "Projected Peak Demand",
+        f"{projected_peak:,.2f} MW"
+    )
+
+with c3:
+    st.metric(
+        "Available Capacity",
+        f"{available_capacity:,.2f} MW"
+    )
+
+with c4:
+    st.metric(
+        "Additional Capacity Needed",
+        f"{required_new_capacity:,.2f} MW"
+    )
 
 # -----------------------------------------------------
 # INTERPRETATION
@@ -3770,7 +3779,7 @@ projection_df = pd.DataFrame(
 )
 
 st.caption(
-    f"10-Year Capacity Planning Outlook @ {growth_rate:.1f}% Annual Demand Growth"
+    f"10-Year Capacity Outlook @ {growth_rate:.1f}% Economic Growth Assumption"
 )
 
 st.dataframe(
@@ -3778,9 +3787,6 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
-
-fig = go.Figure()
-
 # -----------------------------------------------------
 # GENERATION STACK
 # -----------------------------------------------------
