@@ -4039,13 +4039,13 @@ peak_snapshot = peak_snapshot[
 peak_snapshot = (
     peak_snapshot
     .groupby(
-        ["Plant","Unit"],
+        ["Plant", "Unit"],
         as_index=False
     )
     .agg(
-        AvgPeakMW=("Value","mean"),
-        MaxPeakMW=("Value","max"),
-        PeakEnergyMWh=("Value","sum")
+        AvgPeakMW=("Value", "mean"),
+        MaxPeakMW=("Value", "max"),
+        PeakEnergyMWh=("Value", "sum")
     )
 )
 
@@ -4055,22 +4055,70 @@ peak_snapshot["PlantUnit"] = (
     + peak_snapshot["Unit"].astype(str)
 )
 
-peak_snapshot["PeakEnergyShare %"] = (
+# ----------------------------------------------
+# UNIT SHARE OF TOTAL PEAK-HOUR ENERGY
+# ----------------------------------------------
+
+total_peak_energy = (
     peak_snapshot["PeakEnergyMWh"]
-    /
-    peak_snapshot["PeakEnergyMWh"].sum()
+    .sum()
+)
+
+peak_snapshot["PeakEnergySharePct"] = (
+    peak_snapshot["PeakEnergyMWh"]
+    / total_peak_energy
     * 100
 )
 
-peak_snapshot = peak_snapshot.sort_values(
-    "PeakEnergyShare %",
-    ascending=False
+# ----------------------------------------------
+# PLANT TOTAL SHARE
+# ----------------------------------------------
+
+plant_share = (
+    peak_snapshot
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        PlantPeakEnergyMWh=("PeakEnergyMWh", "sum")
+    )
+)
+
+plant_share["PlantSharePct"] = (
+    plant_share["PlantPeakEnergyMWh"]
+    /
+    plant_share["PlantPeakEnergyMWh"].sum()
+    * 100
+)
+
+peak_snapshot = peak_snapshot.merge(
+    plant_share[
+        [
+            "Plant",
+            "PlantSharePct"
+        ]
+    ],
+    on="Plant",
+    how="left"
+)
+
+# Sort by plant contribution
+plant_order = (
+    plant_share
+    .sort_values(
+        "PlantSharePct",
+        ascending=False
+    )["Plant"]
+    .tolist()
 )
 
 st.markdown(
     """
     **Story:** During hours when system demand reached at least
-    90% of peak demand, the following plants supported the grid.
+    90% of peak demand, the following generating units supported
+    the grid. Unit contributions are stacked to show the total
+    plant contribution.
     """
 )
 
@@ -4086,34 +4134,84 @@ with st.expander(
                 "AvgPeakMW",
                 "MaxPeakMW",
                 "PeakEnergyMWh",
-                "PeakEnergyShare %"
+                "PeakEnergySharePct",
+                "PlantSharePct"
             ]
-        ],
+        ].round(2),
         use_container_width=True,
         hide_index=True
     )
 
+# -----------------------------------------------------
+# STACKED UNIT CONTRIBUTION CHART
+# -----------------------------------------------------
+
 fig_peak_support = go.Figure()
 
-fig_peak_support.add_trace(
-    go.Bar(
-        y=peak_snapshot["Plant"],
-        x=peak_snapshot["PeakEnergyShare %"],
-        orientation="h",
-        text=peak_snapshot["PeakEnergyShare %"].round(1),
-        texttemplate="%{text:.1f}%",
-        textposition="outside"
-    )
+unit_order = (
+    peak_snapshot["Unit"]
+    .astype(str)
+    .sort_values()
+    .unique()
 )
 
-fig_peak_support.update_layout(
-    title="Peak Hour Energy Contribution Share",
-    xaxis_title="Peak Energy Share (%)",
-    yaxis_title="Plant",
-    height=550,
-    yaxis=dict(
-        categoryorder="total ascending"
+for unit in unit_order:
+
+    temp = peak_snapshot[
+        peak_snapshot["Unit"]
+        .astype(str)
+        == str(unit)
+    ]
+
+    fig_peak_support.add_trace(
+        go.Bar(
+            y=temp["Plant"],
+            x=temp["PeakEnergySharePct"],
+            orientation="h",
+            name=f"Unit {unit}",
+            customdata=temp[
+                [
+                    "PeakEnergySharePct"
+                ]
+            ],
+            hovertemplate=
+                "<b>%{y}</b><br>"
+                f"Unit: {unit}<br>"
+                "Contribution: %{x:.2f}%"
+                "<extra></extra>"
+        )
     )
+
+# Plant total labels
+
+for _, row in plant_share.iterrows():
+
+    fig_peak_support.add_annotation(
+        x=row["PlantSharePct"],
+        y=row["Plant"],
+        text=f"{row['PlantSharePct']:.1f}%",
+        showarrow=False,
+        xanchor="left"
+    )
+
+fig_peak_support.update_layout(
+    barmode="stack",
+    title=(
+        "Peak Hour Energy Contribution Share "
+        "(90%-100% of Peak Demand)"
+    ),
+    xaxis_title="Share of Total Peak-Hour Energy (%)",
+    yaxis_title="Plant",
+    height=max(
+        550,
+        len(plant_order) * 45
+    ),
+    legend_title="Unit"
+)
+
+fig_peak_support.update_yaxes(
+    categoryorder="array",
+    categoryarray=plant_order[::-1]
 )
 
 st.plotly_chart(
