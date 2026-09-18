@@ -3222,8 +3222,6 @@ if len(shortage_events) > 0:
 
 st.subheader("Plant Contribution Analysis")
 
-st.write("Generation Columns:", generation.columns.tolist())
-
 generation = generation[
     generation["Plant"].notna()
 ]
