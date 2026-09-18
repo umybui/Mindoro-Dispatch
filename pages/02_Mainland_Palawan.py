@@ -2555,92 +2555,129 @@ with st.expander(
 
     inspect_df = gap_df.copy()
 
-    selected_hour = st.selectbox(
-        "Select Hour",
+    hour_options = (
         inspect_df["Datetime"]
         .sort_values()
         .dt.strftime("%Y-%m-%d %H:%M")
+        .tolist()
     )
 
-    row = inspect_df[
+    selected_hour = st.selectbox(
+        "Select Hour to Review",
+        hour_options
+    )
+
+    row = inspect_df.loc[
         inspect_df["Datetime"].dt.strftime("%Y-%m-%d %H:%M")
         == selected_hour
     ].iloc[0]
 
+    demand = float(row["TotalDemand"])
+    generation = float(row["TotalGeneration"])
+    reserve_margin = float(row["ReserveMargin"])
+    regulating = float(row["RegulatingReserve"])
+    contingency = float(row["ContingencyReserve"])
+    required = float(row["RequiredReserve"])
+
     reserve_status = (
-        "✅ COMPLIANT"
-        if row["ReserveMargin"] >= row["RequiredReserve"]
-        else "❌ DEFICIENT"
+        "✅ Reserve Compliant"
+        if reserve_margin >= required
+        else "❌ Reserve Deficient"
     )
 
-    a, b, c, d = st.columns(4)
+    c1, c2, c3, c4 = st.columns(4)
 
-    with a:
+    with c1:
         st.metric(
             "Demand",
-            f"{row['TotalDemand'\]:.2f} MW"
+            f"{demand:.2f} MW"
         )
 
-    with b:
+    with c2:
         st.metric(
             "Generation",
-            f"{row['TotalGeneration'\]:.2f} MW"
+            f"{generation:.2f} MW"
         )
 
-    with c:
+    with c3:
         st.metric(
             "Reserve Margin",
-            f"{row['ReserveMargin'\]:.2f} MW"
+            f"{reserve_margin:.2f} MW"
         )
 
-    with d:
+    with c4:
         st.metric(
             "Required Reserve",
-            f"{row['RequiredReserve'\]:.2f} MW"
+            f"{required:.2f} MW"
         )
 
     st.markdown("---")
 
     st.markdown(
         f"""
-### Calculation
+### Reserve Requirement Computation
 
 **Regulating Reserve**
 
-= Demand × 2.8%
+= Total Demand × 2.8%
 
-= {row['TotalDemand'\]:.2f} × 2.8%
+= {demand:.2f} × 2.8%
 
-= **{row['RegulatingReserve'\]:.2f} MW**
+= **{regulating:.2f} MW**
 
 **Contingency Reserve**
 
-= Generation × 10%
+= Total Generation × 10%
 
-= {row['TotalGeneration'\]:.2f} × 10%
+= {generation:.2f} × 10%
 
-= **{row['ContingencyReserve'\]:.2f} MW**
+= **{contingency:.2f} MW**
 
 **Required Reserve**
 
 = Regulating Reserve + Contingency Reserve
 
-= {row['RegulatingReserve'\]:.2f}
-+ {row['ContingencyReserve'\]:.2f}
+= {regulating:.2f} + {contingency:.2f}
 
-= **{row['RequiredReserve'\]:.2f} MW**
+= **{required:.2f} MW**
 
 **Actual Reserve Margin**
 
-= Supply − Demand
+= Total Supply − Total Demand
 
-= **{row['ReserveMargin'\]:.2f} MW**
+= **{reserve_margin:.2f} MW**
+
+### Compliance Check
+
+Reserve Margin ≥ Required Reserve
+
+{reserve_margin:.2f} MW ≥ {required:.2f} MW
 
 ### Result
 
-{reserve_status}
+**{reserve_status}**
 """
     )
+
+    st.caption(
+        """
+        Reserve Requirement Formula
+
+        Required Reserve (MW)
+        =
+        (2.8% × Total Demand)
+        +
+        (10% × Total Generation)
+
+        A served hour is considered reserve compliant only when:
+
+        Reserve Margin ≥ Required Reserve
+        """
+    )
+
+st.write(
+    f"Reserve Gap = {reserve_margin - required:.2f} MW"
+)
 
 # ----------------------------------
 # OPERATING CONDITION BREAKDOWN
