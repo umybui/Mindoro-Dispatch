@@ -1710,16 +1710,6 @@ with st.expander(
 # LDC SEGMENT SETTINGS
 # =====================================================
 
-st.sidebar.subheader("LDC Segmentation")
-
-num_segments = st.sidebar.number_input(
-    "Number of Segments",
-    min_value=2,
-    max_value=8,
-    value=4,
-    step=1
-)
-
 import numpy as np
 
 def optimal_ldc_segments(ldc_values, k):
@@ -1979,6 +1969,27 @@ ldc_pct = (
 )
 
 st.caption("Load Segment Summary")
+
+c1, c2 = st.columns([1, 5])
+
+with c1:
+
+    num_segments = st.selectbox(
+        "Load Segments",
+        options=list(range(2, 9)),
+        index=2,   # 4 segments default
+        key="ldc_segments"
+    )
+
+with c2:
+
+    st.caption(
+        """
+        Increase segments for a more detailed representation
+        of the Load Duration Curve. Fewer segments provide
+        a simpler planning model.
+        """
+    )
 
 fig_elbow = go.Figure()
 
@@ -4122,26 +4133,6 @@ st.markdown(
     """
 )
 
-with st.expander(
-    "Peak Hour Snapshot (90%-100% of Peak Demand)",
-    expanded=False
-):
-    st.dataframe(
-        peak_snapshot[
-            [
-                "Plant",
-                "Unit",
-                "AvgPeakMW",
-                "MaxPeakMW",
-                "PeakEnergyMWh",
-                "PeakEnergySharePct",
-                "PlantSharePct"
-            ]
-        ].round(2),
-        use_container_width=True,
-        hide_index=True
-    )
-
 # -----------------------------------------------------
 # STACKED UNIT CONTRIBUTION CHART
 # -----------------------------------------------------
@@ -4283,6 +4274,27 @@ st.plotly_chart(
     fig_peak_support,
     use_container_width=True
 )
+
+with st.expander(
+    "Peak Hour Snapshot (90%-100% of Peak Demand)",
+    expanded=False
+):
+    st.dataframe(
+        peak_snapshot[
+            [
+                "Plant",
+                "Unit",
+                "AvgPeakMW",
+                "MaxPeakMW",
+                "PeakEnergyMWh",
+                "PeakEnergySharePct",
+                "PlantSharePct"
+            ]
+        ].round(2),
+        use_container_width=True,
+        hide_index=True
+    )
+
 
 # =====================================================
 # PEAK HOUR GENERATION MIX
