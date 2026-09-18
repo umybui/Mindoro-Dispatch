@@ -1826,30 +1826,6 @@ else:
 
     ldc_seg = ldc.copy()
 
-st.caption("Load Segment Summary")
-
-c1, c2 = st.columns([1, 5])
-
-with c1:
-
-    num_segments = st.slider(
-        "Load Segments",
-        min_value=2,
-        max_value=8,
-        value=4,
-        step=1
-    )
-
-with c2:
-
-    st.caption(
-        """
-        Increase segments for a more detailed representation
-        of the Load Duration Curve. Fewer segments provide
-        a simpler planning model.
-        """
-    )
-
 boundaries, total_sse = (
    optimal_ldc_segments(
     ldc_seg.values,
@@ -1857,9 +1833,48 @@ boundaries, total_sse = (
 )
 )
 
+# =====================================================
+# LDC SEGMENT CONTROLS
+# =====================================================
+
+st.caption("Load Segment Summary")
+
+with st.expander(
+    "Segmentation Controls",
+    expanded=True
+):
+
+    c1, c2 = st.columns([1, 3])
+
+    with c1:
+
+        max_segments_to_test = st.number_input(
+            "Maximum Segments Evaluated",
+            min_value=5,
+            max_value=min(100, len(ldc_seg)),
+            value=min(20, len(ldc_seg)),
+            step=5,
+            key="ldc_max_segments"
+        )
+
+    with c2:
+
+        st.caption(
+            """
+            The dashboard automatically evaluates multiple
+            segmentation levels and identifies the elbow point.
+            Higher values increase analysis detail but may
+            slightly increase processing time.
+            """
+        )
+
+# -----------------------------------------------------
+# ELBOW ANALYSIS
+# -----------------------------------------------------
+
 sse_results = []
 
-for k in range(1, 9):
+for k in range(1, max_segments_to_test + 1):
 
     _, sse = optimal_ldc_segments(
         ldc_seg.values,
@@ -1870,6 +1885,87 @@ for k in range(1, 9):
         "Segments": k,
         "SSE": sse
     })
+
+sse_df = pd.DataFrame(sse_results)
+
+sse_df["Improvement"] = (
+    sse_df["SSE"].shift(1)
+    - sse_df["SSE"]
+)
+
+sse_df["PctImprovement"] = (
+    sse_df["Improvement"]
+    /
+    sse_df["SSE"].shift(1)
+    * 100
+)
+
+recommended_segments = min(
+    4,
+    max_segments_to_test
+)
+
+for i in range(2, len(sse_df)):
+
+    if (
+        sse_df.loc[i, "PctImprovement"]
+        < 10
+    ):
+
+        recommended_segments = int(
+            sse_df.loc[
+                i - 1,
+                "Segments"
+            ]
+        )
+
+        break
+
+# -----------------------------------------------------
+# USER SELECTION
+# -----------------------------------------------------
+
+c1, c2 = st.columns([1, 2])
+
+with c1:
+
+    use_recommended = st.toggle(
+        "Use Recommended",
+        value=True,
+        key="ldc_auto_segments"
+    )
+
+with c2:
+
+    st.success(
+        f"Recommended Segments: {recommended_segments}"
+    )
+
+if use_recommended:
+
+    num_segments = recommended_segments
+
+else:
+
+    num_segments = st.number_input(
+        "Selected Segments",
+        min_value=2,
+        max_value=max_segments_to_test,
+        value=recommended_segments,
+        step=1,
+        key="ldc_manual_segments"
+    )
+
+# -----------------------------------------------------
+# FINAL SEGMENTATION
+# -----------------------------------------------------
+
+boundaries, total_sse = (
+    optimal_ldc_segments(
+        ldc_seg.values,
+        num_segments
+    )
+)
 
 sse_df = pd.DataFrame(
     sse_results
