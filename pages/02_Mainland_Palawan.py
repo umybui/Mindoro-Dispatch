@@ -3731,50 +3731,6 @@ else:
     )
 
 # -----------------------------------------------------
-# CROSS-CHECK TABLE
-# -----------------------------------------------------
-
-with st.expander(
-    "View Dependable Capacity Assumptions",
-    expanded=False
-):
-
-    st.dataframe(
-        cap_check.sort_values(
-            ["Plant", "Unit"]
-        ),
-        use_container_width=True,
-        hide_index=True
-    )
-
-    if len(removed_capacity_tbl) > 0:
-
-        st.markdown(
-            "##### Removed Plants"
-        )
-
-        st.dataframe(
-            removed_capacity_tbl,
-            use_container_width=True,
-            hide_index=True
-        )
-
-    st.write(
-        f"Total Dependable Capacity: "
-        f"{cap_check['DependableMW'].sum():.2f} MW"
-    )
-
-    st.write(
-        f"Remaining Capacity: "
-        f"{available_capacity:.2f} MW"
-    )
-
-    st.write(
-        f"Removed Capacity: "
-        f"{removed_capacity:.2f} MW"
-    )
-
-# -----------------------------------------------------
 # 10-YEAR OUTLOOK TABLE
 # -----------------------------------------------------
 
