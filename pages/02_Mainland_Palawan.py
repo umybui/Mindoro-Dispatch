@@ -2480,6 +2480,8 @@ with r3:
         f"{avg_required:.2f} MW"
     )
 
+
+
 # ----------------------------------
 # STUDY PERIOD SUMMARY
 # ----------------------------------
@@ -3051,7 +3053,7 @@ plant_summary = plant_summary.sort_values(
 
 import plotly.express as px
 
-c1, c2 = st.columns(2)
+c1, c2 = st.columns([3, 1])
 
 with c1:
 
@@ -3065,7 +3067,7 @@ with c1:
 
     fig_tree.update_layout(
         title="Generation Share Treemap",
-        height=600
+        height=650
     )
 
     st.plotly_chart(
@@ -3073,15 +3075,24 @@ with c1:
         use_container_width=True
     )
 
-    with st.expander(
-        "View Plant Contribution Data",
-        expanded=False
-    ):
-        st.dataframe(
-            plant_summary.round(2),
-            use_container_width=True,
-            hide_index=True
-        )
+with c2:
+
+    st.markdown("##### Plant Contribution Data")
+
+    st.dataframe(
+        plant_summary[
+            [
+                "Plant",
+                "AvgMW",
+                "PeakMW",
+                "EnergyMWh",
+                "Contribution %"
+            ]
+        ].round(2),
+        use_container_width=True,
+        hide_index=True,
+        height=650
+    )
 
 # =====================================================
 # OPTION 2 - PLANT ROLE MATRIX
