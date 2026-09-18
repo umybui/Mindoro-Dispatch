@@ -3963,8 +3963,8 @@ with st.expander(
 
         The selected order controls the generation stack
         displayed in the historical supply-demand chart
-        and may be used as a planning proxy for merit-order
-        dispatch assumptions.
+        and may be used as a planning proxy for
+        merit-order dispatch assumptions.
         """
     )
 
