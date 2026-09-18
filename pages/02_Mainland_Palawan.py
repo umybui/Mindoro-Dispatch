@@ -2566,36 +2566,37 @@ with st.expander(
 
     else:
 
-        inspect_df["MonthLabel"] = (
+        inspect_df["MonthDate"] = (
             inspect_df["Datetime"]
-            .dt.strftime("%b %Y")
+            .dt.to_period("M")
+            .dt.to_timestamp()
+        )
+
+        month_options = (
+            inspect_df["MonthDate"]
+            .drop_duplicates()
+            .sort_values()
+            .tolist()
         )
 
         m1, m2, m3 = st.columns(3)
 
-        inspect_df["MonthDate"] = (
-    inspect_df["Datetime"]
-    .dt.to_period("M")
-    .dt.to_timestamp()
-)
+        with m1:
 
-month_options = (
-    inspect_df["MonthDate"]
-    .drop_duplicates()
-    .sort_values()
-)
+            selected_month = st.selectbox(
+                "Month",
+                month_options,
+                format_func=lambda x: x.strftime("%b %Y")
+            )
 
-with m1:
+        month_df = inspect_df[
+            inspect_df["MonthDate"] == selected_month
+        ].copy()
 
-    selected_month = st.selectbox(
-        "Month",
-        month_options,
-        format_func=lambda x: x.strftime("%b %Y")
-    )
-
-month_df = inspect_df[
-    inspect_df["MonthDate"] == selected_month
-].copy()
+        month_df["DayLabel"] = (
+            month_df["Datetime"]
+            .dt.strftime("%Y-%m-%d")
+        )
 
         with m2:
 
@@ -2607,14 +2608,13 @@ month_df = inspect_df[
             )
 
         day_df = month_df[
-            month_df["DayLabel"]
-            == selected_day
+            month_df["DayLabel"] == selected_day
         ].copy()
 
         with m3:
 
             selected_hour = st.selectbox(
-                "Reserve-Deficient Hour",
+                "Hour",
                 day_df["Datetime"]
                 .dt.strftime("%H:%M")
                 .tolist()
@@ -2743,8 +2743,6 @@ Negative values indicate reserve deficiency.
 Only reserve-deficient hours are shown in this review tool.
 """
         )
-
-
 
 # ----------------------------------
 # OPERATING CONDITION BREAKDOWN
