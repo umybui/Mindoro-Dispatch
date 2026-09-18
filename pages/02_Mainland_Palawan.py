@@ -288,6 +288,26 @@ total_shortage_mwh = gap_df.loc[
 ].sum()
 
 # =====================================================
+# DEFAULT PLANT ORDER
+# =====================================================
+
+plant_order = (
+    generation
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        EnergyMWh=("Value", "sum")
+    )
+    .sort_values(
+        "EnergyMWh",
+        ascending=False
+    )["Plant"]
+    .tolist()
+)
+
+# =====================================================
 # PLANT FILTER
 # =====================================================
 
@@ -297,9 +317,9 @@ selected_plants = st.sidebar.multiselect(
     default=plant_order
 )
 
-generation = generation[
+generation_capacity = generation[
     generation["Plant"].isin(selected_plants)
-]
+].copy()
 
 peak_generation_mw = (
     gap_df["TotalGeneration"]
@@ -3574,8 +3594,9 @@ cap_check = (
 )
 
 cap_check["Retired"] = (
-    cap_check["Plant"]
-    .isin(retired_plants)
+    cap_check["Plant"].isin(retired_plants)
+    |
+    ~cap_check["Plant"].isin(selected_plants)
 )
 
 available_capacity = (
@@ -3738,6 +3759,94 @@ st.dataframe(
     hide_index=True
 )
 
+# =====================================================
+# MERIT ORDER SCENARIO
+# =====================================================
+
+st.subheader(
+    "Historical Supply-Demand Dispatch"
+)
+
+merit_basis = st.selectbox(
+    "Merit Order Basis",
+    [
+        "Largest Generator First",
+        "Smallest Generator First",
+        "Alphabetical",
+        "Manual Override"
+    ]
+)
+
+plant_stats = (
+    generation
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        AvgMW=("Value", "mean"),
+        EnergyMWh=("Value", "sum")
+    )
+)
+
+if merit_basis == "Alphabetical":
+
+    plant_order = sorted(
+        generation["Plant"].unique()
+    )
+
+elif merit_basis == "Smallest Generator First":
+
+    plant_order = (
+        plant_stats
+        .sort_values(
+            "EnergyMWh",
+            ascending=True
+        )["Plant"]
+        .tolist()
+    )
+
+else:
+
+    plant_order = (
+        plant_stats
+        .sort_values(
+            "EnergyMWh",
+            ascending=False
+        )["Plant"]
+        .tolist()
+    )
+
+with st.expander(
+    "Merit Order Dispatch Scenario",
+    expanded=False
+):
+
+    if merit_basis == "Manual Override":
+
+        st.markdown(
+            "##### Drag and Drop Override"
+        )
+
+        plant_order = sort_items(
+            items=plant_order,
+            direction="vertical"
+        )
+
+    merit_order_tbl = pd.DataFrame({
+        "Priority": range(
+            1,
+            len(plant_order) + 1
+        ),
+        "Plant": plant_order
+    })
+
+    st.dataframe(
+        merit_order_tbl,
+        use_container_width=True,
+        hide_index=True
+    )
+
 fig = go.Figure()
 
 # -----------------------------------------------------
@@ -3891,131 +4000,6 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =====================================================
-# MERIT ORDER SCENARIO
-# =====================================================
-
-merit_basis = st.selectbox(
-    "Merit Order Basis",
-    [
-        "Largest Generator First",
-        "Smallest Generator First",
-        "Alphabetical",
-        "Manual Override"
-    ]
-)
-
-plant_stats = (
-    generation
-    .groupby(
-        "Plant",
-        as_index=False
-    )
-    .agg(
-        AvgMW=("Value", "mean"),
-        EnergyMWh=("Value", "sum")
-    )
-)
-
-if merit_basis == "Alphabetical":
-
-    plant_order = sorted(
-        generation["Plant"].unique()
-    )
-
-elif merit_basis == "Smallest Generator First":
-
-    plant_order = (
-        plant_stats
-        .sort_values(
-            "EnergyMWh",
-            ascending=True
-        )["Plant"]
-        .tolist()
-    )
-
-else:
-
-    plant_order = (
-        plant_stats
-        .sort_values(
-            "EnergyMWh",
-            ascending=False
-        )["Plant"]
-        .tolist()
-    )
-
-
-# =====================================================
-# MERIT ORDER DISPATCH SCENARIO
-# =====================================================
-
-with st.expander(
-    "Merit Order Dispatch Scenario",
-    expanded=False
-):
-
-    st.caption(
-        """
-        Define the assumed dispatch priority of generating plants.
-
-        Priority 1 = First generator dispatched
-        Priority 2 = Next generator dispatched
-
-        The selected order controls the generation stack
-        displayed in the historical supply-demand chart
-        and may be used as a planning proxy for
-        merit-order dispatch assumptions.
-        """
-    )
-
-    merit_order_tbl = pd.DataFrame({
-        "Priority": range(
-            1,
-            len(plant_order) + 1
-        ),
-        "Plant": plant_order
-    })
-
-    st.markdown(
-        "##### Current Merit Order"
-    )
-
-    st.dataframe(
-        merit_order_tbl,
-        use_container_width=True,
-        hide_index=True
-    )
-
-    if merit_basis == "Manual Override":
-
-        st.markdown(
-            "##### Drag and Drop Override"
-        )
-
-        plant_order = sort_items(
-            items=plant_order,
-            direction="vertical"
-        )
-
-        updated_merit_tbl = pd.DataFrame({
-            "Priority": range(
-                1,
-                len(plant_order) + 1
-            ),
-            "Plant": plant_order
-        })
-
-        st.markdown(
-            "##### Updated Merit Order"
-        )
-
-        st.dataframe(
-            updated_merit_tbl,
-            use_container_width=True,
-            hide_index=True
-        )
-            
 # =====================================================
 # PEAK HOUR PERFORMANCE ANALYSIS
 # =====================================================
