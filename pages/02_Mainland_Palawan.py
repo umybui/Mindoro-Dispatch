@@ -1832,11 +1832,12 @@ c1, c2 = st.columns([1, 5])
 
 with c1:
 
-    num_segments = st.selectbox(
+    num_segments = st.slider(
         "Load Segments",
-        options=list(range(2, 9)),
-        index=2,   # 4 segments default
-        key="ldc_segments"
+        min_value=2,
+        max_value=8,
+        value=4,
+        step=1
     )
 
 with c2:
