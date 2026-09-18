@@ -3102,15 +3102,24 @@ st.subheader(
 
 st.markdown(
     """
-    **Story:** Identifies whether a plant functions primarily
-    as a baseload asset, peaking asset, or critical system asset.
+**How to Read This Chart**
 
-    • Higher = larger annual energy contribution
+• Higher = larger annual energy contribution
 
-    • Further right = larger contribution during high-demand periods
+• Further right = larger contribution during peak-demand periods
 
-    • Larger bubble = larger average generating capability
-    """
+• Larger bubbles = larger average generation output
+
+**Quadrants**
+
+🟩 Upper Right = Core System Assets (high energy + high peak support)
+
+🟦 Upper Left = Baseload-Oriented Assets (high energy, lower peak support)
+
+🟨 Lower Right = Peaking Assets (critical during peaks, lower annual energy)
+
+🟥 Lower Left = Support Assets (limited contribution to both energy and peak demand)
+"""
 )
 
 peak_threshold = peak_demand * 0.90
@@ -3210,6 +3219,39 @@ fig_role.add_vline(
     line_dash="dash",
     line_color="gray"
 )
+
+fig_role.add_annotation(
+    x=median_peak * 0.5,
+    y=median_energy * 1.5,
+    text="BASELOAD",
+    showarrow=False,
+    opacity=0.5
+)
+
+fig_role.add_annotation(
+    x=median_peak * 1.6,
+    y=median_energy * 1.5,
+    text="CORE ASSETS",
+    showarrow=False,
+    opacity=0.5
+)
+
+fig_role.add_annotation(
+    x=median_peak * 1.6,
+    y=median_energy * 0.4,
+    text="PEAKING",
+    showarrow=False,
+    opacity=0.5
+)
+
+fig_role.add_annotation(
+    x=median_peak * 0.5,
+    y=median_energy * 0.4,
+    text="SUPPORT",
+    showarrow=False,
+    opacity=0.5
+)
+
 
 st.plotly_chart(
     fig_role,
