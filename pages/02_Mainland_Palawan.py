@@ -3568,6 +3568,38 @@ capacity_data["Attribute"] = (
 )
 
 # -----------------------------------------------------
+# CAPACITY PLANNING ASSUMPTIONS
+# -----------------------------------------------------
+
+st.subheader(
+    "Capacity Planning Assumptions"
+)
+
+a1, a2 = st.columns([1, 2])
+
+with a1:
+
+    growth_rate = st.slider(
+        "Economic Growth (%)",
+        min_value=0.0,
+        max_value=10.0,
+        value=3.0,
+        step=0.1
+    )
+
+with a2:
+
+    retired_plants = st.multiselect(
+        "Retired / Unavailable Plants",
+        options=sorted(
+            capacity_data["Plant"]
+            .dropna()
+            .unique()
+        ),
+        default=[]
+    )
+
+# -----------------------------------------------------
 # CAPACITY SCENARIO
 # -----------------------------------------------------
 
@@ -3610,37 +3642,6 @@ removed_capacity = (
     .sum()
 )
 
-# -----------------------------------------------------
-# CAPACITY PLANNING ASSUMPTIONS
-# -----------------------------------------------------
-
-st.subheader(
-    "Capacity Planning Assumptions"
-)
-
-a1, a2 = st.columns([1, 2])
-
-with a1:
-
-    growth_rate = st.slider(
-        "Economic Growth (%)",
-        min_value=0.0,
-        max_value=10.0,
-        value=3.0,
-        step=0.1
-    )
-
-with a2:
-
-    retired_plants = st.multiselect(
-        "Retired / Unavailable Plants",
-        options=sorted(
-            capacity_data["Plant"]
-            .dropna()
-            .unique()
-        ),
-        default=[]
-    )
 # -----------------------------------------------------
 # OUTLOOK KPIs
 # -----------------------------------------------------
