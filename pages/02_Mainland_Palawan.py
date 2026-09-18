@@ -2646,103 +2646,103 @@ with st.expander(
 
         c1, c2, c3, c4, c5 = st.columns(5)
 
-with c1:
-    st.metric(
-        "Demand",
-        f"{demand:.2f} MW"
-    )
-
-with c2:
-    st.metric(
-        "Generation",
-        f"{generation_mw:.2f} MW"
-    )
-
-with c3:
-    st.metric(
-        "Reserve Margin",
-        f"{reserve_margin:.2f} MW"
-    )
-
-with c4:
-    st.metric(
-        "Required Reserve",
-        f"{required:.2f} MW"
-    )
-
-with c5:
-    st.metric(
-        "Reserve Gap",
-        f"{reserve_gap:.2f} MW"
-    )
-
-st.markdown("---")
-
-st.markdown(
-    f"""
-### Reserve Requirement Computation
-
-**Selected Hour:** {row['Datetime'].strftime('%Y-%m-%d %H:%M')}
-
-#### Regulating Reserve
-
-= Total Demand × 2.8%
-
-= {demand:.2f} × 2.8%
-
-= **{regulating:.2f} MW**
-
-#### Contingency Reserve
-
-= Total Generation × 10%
-
-= {generation_mw:.2f} × 10%
-
-= **{contingency:.2f} MW**
-
-#### Required Reserve
-
-= Regulating Reserve + Contingency Reserve
-
-= {regulating:.2f} + {contingency:.2f}
-
-= **{required:.2f} MW**
-
-#### Actual Reserve Margin
-
-= Total Supply − Total Demand
-
-= **{reserve_margin:.2f} MW**
-
-#### Compliance Check
-
-Reserve Margin ≥ Required Reserve
-
-**{reserve_margin:.2f} MW ≥ {required:.2f} MW**
-
-#### Result
-
-**{reserve_status}**
-"""
-)
-
-st.caption(
-    """
-Required Reserve (MW)
-=
-(2.8% × Total Demand)
-+
-(10% × Total Generation)
-
-Reserve Gap (MW)
-=
-Reserve Margin − Required Reserve
-
-Negative values indicate reserve deficiency.
-
-Only reserve-deficient hours are shown in this review tool.
-"""
-)
+        with c1:
+            st.metric(
+                "Demand",
+                f"{demand:.2f} MW"
+            )
+        
+        with c2:
+            st.metric(
+                "Generation",
+                f"{generation_mw:.2f} MW"
+            )
+        
+        with c3:
+            st.metric(
+                "Reserve Margin",
+                f"{reserve_margin:.2f} MW"
+            )
+        
+        with c4:
+            st.metric(
+                "Required Reserve",
+                f"{required:.2f} MW"
+            )
+        
+        with c5:
+            st.metric(
+                "Reserve Gap",
+                f"{reserve_gap:.2f} MW"
+            )
+        
+        st.markdown("---")
+        
+        st.markdown(
+            f"""
+        ### Reserve Requirement Computation
+        
+        **Selected Hour:** {row['Datetime'].strftime('%Y-%m-%d %H:%M')}
+        
+        #### Regulating Reserve
+        
+        = Total Demand × 2.8%
+        
+        = {demand:.2f} × 2.8%
+        
+        = **{regulating:.2f} MW**
+        
+        #### Contingency Reserve
+        
+        = Total Generation × 10%
+        
+        = {generation_mw:.2f} × 10%
+        
+        = **{contingency:.2f} MW**
+        
+        #### Required Reserve
+        
+        = Regulating Reserve + Contingency Reserve
+        
+        = {regulating:.2f} + {contingency:.2f}
+        
+        = **{required:.2f} MW**
+        
+        #### Actual Reserve Margin
+        
+        = Total Supply − Total Demand
+        
+        = **{reserve_margin:.2f} MW**
+        
+        #### Compliance Check
+        
+        Reserve Margin ≥ Required Reserve
+        
+        **{reserve_margin:.2f} MW ≥ {required:.2f} MW**
+        
+        #### Result
+        
+        **{reserve_status}**
+        """
+        )
+        
+        st.caption(
+            """
+        Required Reserve (MW)
+        =
+        (2.8% × Total Demand)
+        +
+        (10% × Total Generation)
+        
+        Reserve Gap (MW)
+        =
+        Reserve Margin − Required Reserve
+        
+        Negative values indicate reserve deficiency.
+        
+        Only reserve-deficient hours are shown in this review tool.
+        """
+        )
 
 # ----------------------------------
 # OPERATING CONDITION BREAKDOWN
