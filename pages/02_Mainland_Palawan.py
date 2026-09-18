@@ -3083,10 +3083,8 @@ with c2:
         plant_summary[
             [
                 "Plant",
-                "AvgMW",
-                "PeakMW",
+                "Contribution %",
                 "EnergyMWh",
-                "Contribution %"
             ]
         ].round(2),
         use_container_width=True,
