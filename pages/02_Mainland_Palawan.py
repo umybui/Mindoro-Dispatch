@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import numpy as np
 from streamlit_sortables import sort_items
 
 # =====================================================
@@ -4147,22 +4146,19 @@ with st.expander(
 # STACKED UNIT CONTRIBUTION CHART
 # -----------------------------------------------------
 
-import matplotlib.colors as mcolors
-
 def get_shade(hex_color, factor):
 
-    rgb = mcolors.to_rgb(hex_color)
+    hex_color = hex_color.lstrip("#")
 
-    white = (1, 1, 1)
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
 
-    blended = tuple(
-        rgb[i] * factor
-        + white[i] * (1 - factor)
-        for i in range(3)
-    )
+    r = int(r * factor + 255 * (1 - factor))
+    g = int(g * factor + 255 * (1 - factor))
+    b = int(b * factor + 255 * (1 - factor))
 
-    return mcolors.to_hex(blended)
-
+    return f"#{r:02X}{g:02X}{b:02X}"
 
 # -----------------------------------------------------
 # BASE COLOR PER PLANT
@@ -4206,11 +4202,16 @@ for plant in plant_order:
         "#1565C0"
     )
 
-    shade_levels = np.linspace(
-    1.0,
-    0.15,
-    max(len(plant_units), 2)
-    )
+    unit_count = max(len(plant_units), 2)
+
+    shade_levels = [
+        1.00 - (
+            (1.00 - 0.25)
+            * i
+            / (unit_count - 1)
+        )
+        for i in range(unit_count)
+    ]
     
     for idx, (_, row) in enumerate(
         plant_units.iterrows()
