@@ -4228,7 +4228,8 @@ for plant in plant_order:
                 x=[row["PeakEnergySharePct"]],
                 orientation="h",
                 marker_color=color,
-                name=f"{row['Plant']} | {row['Unit']}",
+                name=row["Plant"],
+                showlegend=(idx == 0),
                 hovertemplate=
                     "<b>%{y}</b><br>"
                     f"Unit: {row['Unit']}<br>"
