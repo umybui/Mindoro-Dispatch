@@ -3587,11 +3587,6 @@ retired_plants = st.sidebar.multiselect(
 
 planning_horizon = 10
 
-projected_peak = (
-    peak_demand
-    * (1 + growth_rate / 100) ** planning_horizon
-)
-
 cap_check = (
     capacity_data[
         capacity_data["Attribute"]
@@ -3645,34 +3640,6 @@ removed_capacity_tbl = (
         ascending=False
     )
 )
-
-capacity_margin = (
-    available_capacity
-    - projected_peak
-)
-
-reserve_margin_pct = (
-    capacity_margin
-    / projected_peak
-    * 100
-)
-
-required_new_capacity = max(
-    projected_peak - available_capacity,
-    0
-)
-
-if reserve_margin_pct >= 20:
-    planning_risk = "Low Risk"
-
-elif reserve_margin_pct >= 10:
-    planning_risk = "Moderate Risk"
-
-elif reserve_margin_pct >= 0:
-    planning_risk = "High Risk"
-
-else:
-    planning_risk = "Capacity Deficit"
 
 # -----------------------------------------------------
 # OUTLOOK KPIs
