@@ -3577,6 +3577,14 @@ st.sidebar.subheader(
     "Capacity Scenario"
 )
 
+growth_rate = st.sidebar.slider(
+    "Annual Demand Growth (%)",
+    min_value=0.0,
+    max_value=10.0,
+    value=3.0,
+    step=0.1
+)
+
 retired_plants = st.sidebar.multiselect(
     "Scenario: Retired / Unavailable Plants",
     options=sorted(
@@ -3646,6 +3654,53 @@ removed_capacity_tbl = (
 # -----------------------------------------------------
 # OUTLOOK KPIs
 # -----------------------------------------------------
+
+projected_peak = (
+    peak_demand
+    * (1 + growth_rate / 100) ** planning_horizon
+)
+
+capacity_margin = (
+    available_capacity
+    - projected_peak
+)
+
+reserve_margin_pct = (
+    capacity_margin
+    / projected_peak
+    * 100
+)
+
+required_new_capacity = max(
+    projected_peak - available_capacity,
+    0
+)
+
+if reserve_margin_pct >= 20:
+    planning_risk = "Low Risk"
+
+elif reserve_margin_pct >= 10:
+    planning_risk = "Moderate Risk"
+
+elif reserve_margin_pct >= 0:
+    planning_risk = "High Risk"
+
+else:
+    planning_risk = "Capacity Deficit"
+
+st.subheader(
+    "Demand Growth & Capacity Outlook"
+)
+
+st.metric(
+    "Projected Peak Demand",
+    f"{projected_peak:,.2f} MW"
+)
+
+st.metric(
+    "Additional Capacity Needed",
+    f"{required_new_capacity:,.2f} MW"
+)
 
 # -----------------------------------------------------
 # INTERPRETATION
