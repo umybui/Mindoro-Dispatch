@@ -288,72 +288,26 @@ total_shortage_mwh = gap_df.loc[
 ].sum()
 
 # =====================================================
-# INITIAL SORT
+# MERIT ORDER SCENARIO
 # =====================================================
 
 merit_basis = st.selectbox(
     "Merit Order Basis",
     [
         "Largest Generator First",
-        "Peak Contribution",
-        "Capability Realization",
+        "Smallest Generator First",
         "Alphabetical",
         "Manual Override"
     ]
 )
 
-plant_order =
-plant_summary.sort_values(
-    "EnergyMWh",
-    ascending=False
-)["Plant"].tolist()
-
-plant_order =
-role_df.sort_values(
-    "PeakContributionPct",
-    ascending=False
-)["Plant"].tolist()
-
-plant_order =
-asset_perf.sort_values(
-    "CapabilityRealization %",
-    ascending=False
-)["Plant"].tolist()
-
 plant_stats = (
     generation
-    .groupby("Plant")["Value"]
-    .mean()
-    .reset_index()
-)
-
-if sort_option == "Alphabetical":
-
-    plant_order = sorted(
-        generation["Plant"].unique()
+    .groupby(
+        "Plant",
+        as_index=False
     )
-
-elif sort_option == "Largest Generator First":
-
-    plant_order = (
-        plant_stats
-        .sort_values(
-            "Value",
-            ascending=False
-        )["Plant"]
-        .tolist()
-    )
-
-else:
-
-    plant_order = (
-        plant_stats
-        .sort_values(
-            "Value",
-            ascending=True
-        )["Plant"]
-        .tolist()
-    )
+    .agg(
 
 # =====================================================
 # PLANT FILTER
@@ -3968,61 +3922,35 @@ with st.expander(
     expanded=False
 ):
 
-st.caption(
-    """
-    Define the assumed dispatch priority of generating plants.
+    st.caption(
+        """
+        Define the assumed dispatch priority
+        of generating plants.
 
-    Priority 1 = First generator dispatched
-    Priority 2 = Next generator dispatched
-
-    The selected order controls the generation stack
-    displayed in the historical dispatch chart and can
-    be used as a planning proxy for merit-order dispatch
-    assumptions.
-    """
-)
-
-merit_order_tbl = pd.DataFrame({
-    "Priority": range(
-        1,
-        len(plant_order) + 1
-    ),
-    "Plant": plant_order
-})
-
-st.dataframe(
-    merit_order_tbl,
-    use_container_width=True,
-    hide_index=True
-)
-
-st.markdown(
-    "##### Override Merit Order"
-)
-
-plant_order = sort_items(
-    items=plant_order,
-    direction="vertical"
-)
-
-updated_merit_tbl = pd.DataFrame({
-    "Priority": range(
-        1,
-        len(plant_order) + 1
-    ),
-    "Plant": plant_order
-})
-
-st.dataframe(
-    updated_merit_tbl,
-    use_container_width=True,
-    hide_index=True
-)
-    
-    plant_order = sort_items(
-        items=plant_order,
-        direction="vertical"
+        Priority 1 = First generator dispatched.
+        """
     )
+
+    merit_order_tbl = pd.DataFrame({
+        "Priority": range(
+            1,
+            len(plant_order) + 1
+        ),
+        "Plant": plant_order
+    })
+
+    st.dataframe(
+        merit_order_tbl,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    if merit_basis == "Manual Override":
+
+        plant_order = sort_items(
+            items=plant_order,
+            direction="vertical"
+        )
 
 # =====================================================
 # PEAK HOUR PERFORMANCE ANALYSIS
