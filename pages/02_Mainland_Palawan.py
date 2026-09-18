@@ -2553,71 +2553,133 @@ with st.expander(
     expanded=False
 ):
 
-    inspect_df = gap_df.copy()
+    inspect_df = gap_df[
+        gap_df["ReserveMargin"]
+        < gap_df["RequiredReserve"]
+    ].copy()
 
-    hour_options = (
-        inspect_df["Datetime"]
-        .sort_values()
-        .dt.strftime("%Y-%m-%d %H:%M")
-        .tolist()
-    )
+    if inspect_df.empty:
 
-    selected_hour = st.selectbox(
-        "Select Hour to Review",
-        hour_options
-    )
-
-    row = inspect_df.loc[
-        inspect_df["Datetime"].dt.strftime("%Y-%m-%d %H:%M")
-        == selected_hour
-    ].iloc[0]
-
-    demand = float(row["TotalDemand"])
-    generation = float(row["TotalGeneration"])
-    reserve_margin = float(row["ReserveMargin"])
-    regulating = float(row["RegulatingReserve"])
-    contingency = float(row["ContingencyReserve"])
-    required = float(row["RequiredReserve"])
-
-    reserve_status = (
-        "✅ Reserve Compliant"
-        if reserve_margin >= required
-        else "❌ Reserve Deficient"
-    )
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-        st.metric(
-            "Demand",
-            f"{demand:.2f} MW"
+        st.success(
+            "No reserve-deficient hours were found in the selected study period."
         )
 
-    with c2:
-        st.metric(
-            "Generation",
-            f"{generation:.2f} MW"
+    else:
+
+        inspect_df["MonthLabel"] = (
+            inspect_df["Datetime"]
+            .dt.strftime("%b %Y")
         )
 
-    with c3:
-        st.metric(
-            "Reserve Margin",
-            f"{reserve_margin:.2f} MW"
+        m1, m2, m3 = st.columns(3)
+
+        with m1:
+
+            selected_month = st.selectbox(
+                "Month",
+                sorted(
+                    inspect_df["MonthLabel"].unique()
+                )
+            )
+
+        month_df = inspect_df[
+            inspect_df["MonthLabel"]
+            == selected_month
+        ].copy()
+
+        month_df["DayLabel"] = (
+            month_df["Datetime"]
+            .dt.strftime("%Y-%m-%d")
         )
 
-    with c4:
-        st.metric(
-            "Required Reserve",
-            f"{required:.2f} MW"
+        with m2:
+
+            selected_day = st.selectbox(
+                "Day",
+                sorted(
+                    month_df["DayLabel"].unique()
+                )
+            )
+
+        day_df = month_df[
+            month_df["DayLabel"]
+            == selected_day
+        ].copy()
+
+        with m3:
+
+            selected_hour = st.selectbox(
+                "Reserve-Deficient Hour",
+                day_df["Datetime"]
+                .dt.strftime("%H:%M")
+                .tolist()
+            )
+
+        row = day_df.loc[
+            day_df["Datetime"]
+            .dt.strftime("%H:%M")
+            == selected_hour
+        ].iloc[0]
+
+        demand = float(row["TotalDemand"])
+        generation = float(row["TotalGeneration"])
+        reserve_margin = float(row["ReserveMargin"])
+        regulating = float(row["RegulatingReserve"])
+        contingency = float(row["ContingencyReserve"])
+        required = float(row["RequiredReserve"])
+
+        reserve_gap = (
+            reserve_margin
+            - required
         )
 
-    st.markdown("---")
+        reserve_status = (
+            "✅ Reserve Compliant"
+            if reserve_margin >= required
+            else "❌ Reserve Deficient"
+        )
 
-    st.markdown(
-        f"""
+        c1, c2, c3, c4, c5 = st.columns(5)
+
+        with c1:
+            st.metric(
+                "Demand",
+                f"{demand:.2f} MW"
+            )
+
+        with c2:
+            st.metric(
+                "Generation",
+                f"{generation:.2f} MW"
+            )
+
+        with c3:
+            st.metric(
+                "Reserve Margin",
+                f"{reserve_margin:.2f} MW"
+            )
+
+        with c4:
+            st.metric(
+                "Required Reserve",
+                f"{required:.2f} MW"
+            )
+
+        with c5:
+            st.metric(
+                "Reserve Gap",
+                f"{reserve_gap:.2f} MW"
+            )
+
+        st.markdown("---")
+
+        st.markdown(
+            f"""
 ### Reserve Requirement Computation
 
-**Regulating Reserve**
+**Selected Hour:** {row['Datetime'].strftime('%Y-%m-%d %H:%M')}
+
+#### Regulating Reserve
 
 = Total Demand × 2.8%
 
@@ -2625,7 +2687,7 @@ with st.expander(
 
 = **{regulating:.2f} MW**
 
-**Contingency Reserve**
+#### Contingency Reserve
 
 = Total Generation × 10%
 
@@ -2633,7 +2695,7 @@ with st.expander(
 
 = **{contingency:.2f} MW**
 
-**Required Reserve**
+#### Required Reserve
 
 = Regulating Reserve + Contingency Reserve
 
@@ -2641,43 +2703,43 @@ with st.expander(
 
 = **{required:.2f} MW**
 
-**Actual Reserve Margin**
+#### Actual Reserve Margin
 
 = Total Supply − Total Demand
 
 = **{reserve_margin:.2f} MW**
 
-### Compliance Check
+#### Compliance Check
 
 Reserve Margin ≥ Required Reserve
 
-{reserve_margin:.2f} MW ≥ {required:.2f} MW
+**{reserve_margin:.2f} MW ≥ {required:.2f} MW**
 
-### Result
+#### Result
 
 **{reserve_status}**
 """
-    )
+        )
 
-    st.caption(
-        """
-        Reserve Requirement Formula
+        st.caption(
+            """
+Required Reserve (MW)
+=
+(2.8% × Total Demand)
++
+(10% × Total Generation)
 
-        Required Reserve (MW)
-        =
-        (2.8% × Total Demand)
-        +
-        (10% × Total Generation)
+Reserve Gap (MW)
+=
+Reserve Margin − Required Reserve
 
-        A served hour is considered reserve compliant only when:
+Negative values indicate reserve deficiency.
 
-        Reserve Margin ≥ Required Reserve
-        """
-    )
+Only reserve-deficient hours are shown in this review tool.
+"""
+        )
 
-st.write(
-    f"Reserve Gap = {reserve_margin - required:.2f} MW"
-)
+
 
 # ----------------------------------
 # OPERATING CONDITION BREAKDOWN
