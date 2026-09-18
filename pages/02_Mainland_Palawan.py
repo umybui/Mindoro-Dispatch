@@ -4146,43 +4146,98 @@ with st.expander(
 # STACKED UNIT CONTRIBUTION CHART
 # -----------------------------------------------------
 
+import matplotlib.colors as mcolors
+
+def get_shade(hex_color, factor):
+
+    rgb = mcolors.to_rgb(hex_color)
+
+    white = (1, 1, 1)
+
+    blended = tuple(
+        rgb[i] * factor
+        + white[i] * (1 - factor)
+        for i in range(3)
+    )
+
+    return mcolors.to_hex(blended)
+
+
+# -----------------------------------------------------
+# BASE COLOR PER PLANT
+# -----------------------------------------------------
+
+plant_base_colors = {
+    "E-DELTA P": "#1565C0",
+    "TDELTA P": "#FB8C00",
+    "DMCI ABORLAN": "#2E7D32",
+    "DMCI NARRA": "#C62828",
+    "DMCI IRAWAN": "#6A1B9A",
+    "DMCI QUEZON": "#00897B",
+    "DMCI RIO TUBA": "#283593",
+    "VPOWER": "#616161",
+    "DMCI IRAWAN EPSA": "#8D6E63"
+}
+
 fig_peak_support = go.Figure()
 
-unit_order = (
-    peak_snapshot["Unit"]
-    .astype(str)
-    .sort_values()
-    .unique()
-)
+# -----------------------------------------------------
+# STACK UNITS WITHIN EACH PLANT
+# -----------------------------------------------------
 
-for unit in unit_order:
+for plant in plant_order:
 
-    temp = peak_snapshot[
-        peak_snapshot["Unit"]
-        .astype(str)
-        == str(unit)
-    ]
-
-    fig_peak_support.add_trace(
-        go.Bar(
-            y=temp["Plant"],
-            x=temp["PeakEnergySharePct"],
-            orientation="h",
-            name=f"Unit {unit}",
-            customdata=temp[
-                [
-                    "PeakEnergySharePct"
-                ]
-            ],
-            hovertemplate=
-                "<b>%{y}</b><br>"
-                f"Unit: {unit}<br>"
-                "Contribution: %{x:.2f}%"
-                "<extra></extra>"
+    plant_units = (
+        peak_snapshot[
+            peak_snapshot["Plant"] == plant
+        ]
+        .sort_values(
+            "PeakEnergySharePct",
+            ascending=False
         )
     )
 
-# Plant total labels
+    if plant_units.empty:
+        continue
+
+    base_color = plant_base_colors.get(
+        str(plant).upper(),
+        "#1565C0"
+    )
+
+    shade_levels = np.linspace(
+    1.0,
+    0.15,
+    max(len(plant_units), 2)
+    )
+    
+    for idx, (_, row) in enumerate(
+        plant_units.iterrows()
+    ):
+
+        color = get_shade(
+            base_color,
+            shade_levels[idx]
+        )
+
+        fig_peak_support.add_trace(
+            go.Bar(
+                y=[row["Plant"]],
+                x=[row["PeakEnergySharePct"]],
+                orientation="h",
+                marker_color=color,
+                name=f"{row['Plant']} | {row['Unit']}",
+                hovertemplate=
+                    "<b>%{y}</b><br>"
+                    f"Unit: {row['Unit']}<br>"
+                    "Contribution: %{x:.2f}%"
+                    "<extra></extra>"
+            )
+        )
+
+# -----------------------------------------------------
+# PLANT TOTAL LABELS
+# -----------------------------------------------------
 
 for _, row in plant_share.iterrows():
 
@@ -4191,8 +4246,15 @@ for _, row in plant_share.iterrows():
         y=row["Plant"],
         text=f"{row['PlantSharePct']:.1f}%",
         showarrow=False,
-        xanchor="left"
+        xanchor="left",
+        font=dict(
+            size=11
+        )
     )
+
+# -----------------------------------------------------
+# LAYOUT
+# -----------------------------------------------------
 
 fig_peak_support.update_layout(
     barmode="stack",
@@ -4206,7 +4268,7 @@ fig_peak_support.update_layout(
         550,
         len(plant_order) * 45
     ),
-    legend_title="Unit"
+    legend_title="Plant | Unit"
 )
 
 fig_peak_support.update_yaxes(
