@@ -2627,7 +2627,7 @@ with st.expander(
         ].iloc[0]
 
         demand = float(row["TotalDemand"])
-        generation = float(row["TotalGeneration"])
+        generation_mw = float(row["TotalGeneration"])
         reserve_margin = float(row["ReserveMargin"])
         regulating = float(row["RegulatingReserve"])
         contingency = float(row["ContingencyReserve"])
@@ -3215,6 +3215,12 @@ if len(shortage_events) > 0:
             use_container_width=True,
             hide_index=True
         )
+
+st.write("Generation Columns:", generation.columns.tolist())
+
+generation = generation[
+    generation["Plant"].notna()
+]
 
 # =====================================================
 # Plant Contribution Analysis
