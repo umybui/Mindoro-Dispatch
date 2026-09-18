@@ -288,60 +288,6 @@ total_shortage_mwh = gap_df.loc[
 ].sum()
 
 # =====================================================
-# MERIT ORDER SCENARIO
-# =====================================================
-
-merit_basis = st.selectbox(
-    "Merit Order Basis",
-    [
-        "Largest Generator First",
-        "Smallest Generator First",
-        "Alphabetical",
-        "Manual Override"
-    ]
-)
-
-plant_stats = (
-    generation
-    .groupby(
-        "Plant",
-        as_index=False
-    )
-    .agg(
-        AvgMW=("Value", "mean"),
-        EnergyMWh=("Value", "sum")
-    )
-)
-
-if merit_basis == "Alphabetical":
-
-    plant_order = sorted(
-        generation["Plant"].unique()
-    )
-
-elif merit_basis == "Smallest Generator First":
-
-    plant_order = (
-        plant_stats
-        .sort_values(
-            "EnergyMWh",
-            ascending=True
-        )["Plant"]
-        .tolist()
-    )
-
-else:
-
-    plant_order = (
-        plant_stats
-        .sort_values(
-            "EnergyMWh",
-            ascending=False
-        )["Plant"]
-        .tolist()
-    )
-
-# =====================================================
 # PLANT FILTER
 # =====================================================
 
@@ -3944,6 +3890,61 @@ st.plotly_chart(
     fig,
     use_container_width=True
 )
+
+# =====================================================
+# MERIT ORDER SCENARIO
+# =====================================================
+
+merit_basis = st.selectbox(
+    "Merit Order Basis",
+    [
+        "Largest Generator First",
+        "Smallest Generator First",
+        "Alphabetical",
+        "Manual Override"
+    ]
+)
+
+plant_stats = (
+    generation
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        AvgMW=("Value", "mean"),
+        EnergyMWh=("Value", "sum")
+    )
+)
+
+if merit_basis == "Alphabetical":
+
+    plant_order = sorted(
+        generation["Plant"].unique()
+    )
+
+elif merit_basis == "Smallest Generator First":
+
+    plant_order = (
+        plant_stats
+        .sort_values(
+            "EnergyMWh",
+            ascending=True
+        )["Plant"]
+        .tolist()
+    )
+
+else:
+
+    plant_order = (
+        plant_stats
+        .sort_values(
+            "EnergyMWh",
+            ascending=False
+        )["Plant"]
+        .tolist()
+    )
+
 
 # =====================================================
 # MERIT ORDER DISPATCH SCENARIO
