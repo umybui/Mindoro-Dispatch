@@ -2544,6 +2544,31 @@ with k4:
         f"{worst_reserve_deficiency:,.2f} MW"
     )
 
+with st.expander(
+    "View Reserve Requirement Calculation Details",
+    expanded=False
+):
+
+    calc_month = st.selectbox(
+        "Month",
+        sorted(
+            gap_df["Datetime"]
+            .dt.strftime("%b %Y")
+            .unique()
+        )
+    )
+
+    reserve_calc = gap_df.copy()
+
+    reserve_calc["MonthLabel"] = (
+        reserve_calc["Datetime"]
+        .dt.strftime("%b %Y")
+    )
+
+    reserve_calc = reserve_calc[
+        reserve_calc["MonthLabel"] == calc_month
+    ]
+
 # ----------------------------------
 # OPERATING CONDITION BREAKDOWN
 # ----------------------------------
