@@ -2544,30 +2544,103 @@ with k4:
         f"{worst_reserve_deficiency:,.2f} MW"
     )
 
+# ----------------------------------
+# RESERVE REQUIREMENT CALCULATION
+# ----------------------------------
+
 with st.expander(
-    "View Reserve Requirement Calculation Details",
+    "How Reserve Requirement Was Calculated",
     expanded=False
 ):
 
-    calc_month = st.selectbox(
-        "Month",
-        sorted(
-            gap_df["Datetime"]
-            .dt.strftime("%b %Y")
-            .unique()
+    inspect_df = gap_df.copy()
+
+    selected_hour = st.selectbox(
+        "Select Hour",
+        inspect_df["Datetime"]
+        .sort_values()
+        .dt.strftime("%Y-%m-%d %H:%M")
+    )
+
+    row = inspect_df[
+        inspect_df["Datetime"].dt.strftime("%Y-%m-%d %H:%M")
+        == selected_hour
+    ].iloc[0]
+
+    reserve_status = (
+        "✅ COMPLIANT"
+        if row["ReserveMargin"] >= row["RequiredReserve"]
+        else "❌ DEFICIENT"
+    )
+
+    a, b, c, d = st.columns(4)
+
+    with a:
+        st.metric(
+            "Demand",
+            f"{row['TotalDemand'\]:.2f} MW"
         )
+
+    with b:
+        st.metric(
+            "Generation",
+            f"{row['TotalGeneration'\]:.2f} MW"
+        )
+
+    with c:
+        st.metric(
+            "Reserve Margin",
+            f"{row['ReserveMargin'\]:.2f} MW"
+        )
+
+    with d:
+        st.metric(
+            "Required Reserve",
+            f"{row['RequiredReserve'\]:.2f} MW"
+        )
+
+    st.markdown("---")
+
+    st.markdown(
+        f"""
+### Calculation
+
+**Regulating Reserve**
+
+= Demand × 2.8%
+
+= {row['TotalDemand'\]:.2f} × 2.8%
+
+= **{row['RegulatingReserve'\]:.2f} MW**
+
+**Contingency Reserve**
+
+= Generation × 10%
+
+= {row['TotalGeneration'\]:.2f} × 10%
+
+= **{row['ContingencyReserve'\]:.2f} MW**
+
+**Required Reserve**
+
+= Regulating Reserve + Contingency Reserve
+
+= {row['RegulatingReserve'\]:.2f}
++ {row['ContingencyReserve'\]:.2f}
+
+= **{row['RequiredReserve'\]:.2f} MW**
+
+**Actual Reserve Margin**
+
+= Supply − Demand
+
+= **{row['ReserveMargin'\]:.2f} MW**
+
+### Result
+
+{reserve_status}
+"""
     )
-
-    reserve_calc = gap_df.copy()
-
-    reserve_calc["MonthLabel"] = (
-        reserve_calc["Datetime"]
-        .dt.strftime("%b %Y")
-    )
-
-    reserve_calc = reserve_calc[
-        reserve_calc["MonthLabel"] == calc_month
-    ]
 
 # ----------------------------------
 # OPERATING CONDITION BREAKDOWN
