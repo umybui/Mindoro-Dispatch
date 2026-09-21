@@ -4702,6 +4702,96 @@ st.plotly_chart(
     use_container_width=True
 )
 
+# -----------------------------------------------------
+# DEPENDABLE CAPACITY AUDIT
+# -----------------------------------------------------
+
+check_cap = (
+    capacity_data[
+        capacity_data["Attribute"]
+        .str.contains(
+            "DEPENDABLE CAPACITY",
+            case=False,
+            na=False
+        )
+    ]
+    .groupby(
+        ["Plant", "Unit"],
+        as_index=False
+    )
+    .agg(
+        DependableMW=("Value", "max")
+    )
+)
+
+with st.expander(
+    "View Dependable Capacity Audit Trail",
+    expanded=False
+):
+
+    st.markdown(
+        """
+        This table shows the plant-level dependable capacity
+        used in the asset assessment. Select a plant to see
+        the unit-level breakdown that contributes to the
+        reported total.
+        """
+    )
+
+    plant_rollup = (
+        check_cap
+        .groupby(
+            "Plant",
+            as_index=False
+        )
+        .agg(
+            DependableMW=("DependableMW", "sum")
+        )
+        .sort_values(
+            "DependableMW",
+            ascending=False
+        )
+    )
+
+    st.markdown(
+        "##### Plant-Level Dependable Capacity"
+    )
+
+    st.dataframe(
+        plant_rollup,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    selected_cap_plant = st.selectbox(
+        "Show Unit-Level Breakdown",
+        plant_rollup["Plant"].tolist(),
+        key="capacity_audit_plant"
+    )
+
+    st.markdown(
+        f"##### {selected_cap_plant} Unit Breakdown"
+    )
+
+    unit_breakdown = (
+        check_cap[
+            check_cap["Plant"]
+            == selected_cap_plant
+        ]
+        .sort_values("Unit")
+    )
+
+    st.dataframe(
+        unit_breakdown,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.metric(
+        "Plant Total Dependable Capacity",
+        f"{unit_breakdown['DependableMW'].sum():,.2f} MW"
+    )
+
 # =====================================================
 # SECTION 3
 # ASSET PERFORMANCE ASSESSMENT
@@ -4738,30 +4828,6 @@ st.caption(
       not just during isolated peak events.
     """
 )
-
-check_cap = (
-    capacity_data[
-        capacity_data["Attribute"]
-        .str.contains(
-            "DEPENDABLE CAPACITY",
-            case=False,
-            na=False
-        )
-    ]
-    .groupby(["Plant","Unit"], as_index=False)
-    .agg(
-        DependableMW=("Value","max")
-    )
-    .sort_values(
-        ["Plant","Unit"]
-    )
-)
-
-st.dataframe(
-    check_cap,
-    use_container_width=True
-)
-
 
 # -----------------------------------------------------
 # AVAILABLE CAPACITY
