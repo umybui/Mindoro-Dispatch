@@ -4674,14 +4674,73 @@ for flag in performance["Risk Flag"].unique():
     )
 )
 
+# -----------------------------------------------------
+# UNIT AVAILABILITY FILTER
+# -----------------------------------------------------
+
+st.markdown(
+    "##### Unit Availability Filter"
+)
+
+excluded_units = st.multiselect(
+    "Exclude retired or permanently unavailable units from the chart",
+    options=sorted(
+        performance["PlantUnit"].unique()
+    ),
+    default=[],
+    key="peak_support_excluded_units"
+)
+
+performance_chart = performance[
+    ~performance["PlantUnit"].isin(
+        excluded_units
+    )
+].copy()
+
+# -----------------------------------------------------
+# ACHIEVEMENT CHART
+# -----------------------------------------------------
+
+color_map = {
+    "OK": "green",
+    "Monitor": "gold",
+    "Underperforming": "red",
+    "Unavailable": "gray",
+    "No Data": "lightgray"
+}
+
+fig_perf = go.Figure()
+
+for flag in performance_chart["Risk Flag"].unique():
+
+    temp = performance_chart[
+        performance_chart["Risk Flag"] == flag
+    ]
+
+    fig_perf.add_trace(
+        go.Bar(
+            y=temp["PlantUnit"],
+            x=temp["Peak Support %"],
+            orientation="h",
+            name=flag,
+            marker_color=color_map.get(
+                flag,
+                "blue"
+            )
+        )
+    )
+
 fig_perf.update_layout(
     title=(
-    "Unit Peak Support During Critical Hours"
-    "(Max Peak MW / Dependable MW)"
-),
+        "Unit Peak Support During Critical Hours "
+        "(Max Peak MW / Dependable MW)"
+    ),
     xaxis_title="Peak Support (%)",
-    yaxis_title="Plant",
-    height=600,
+    yaxis_title="Plant | Unit",
+    height=max(
+        600,
+        len(performance_chart) * 25
+    ),
     barmode="group"
 )
 
@@ -4732,9 +4791,9 @@ with st.expander(
     st.markdown(
         """
         This table shows the plant-level dependable capacity
-        used in the asset assessment. Select a plant to see
+        used in the asset assessment. Select a plant to view
         the unit-level breakdown that contributes to the
-        reported total.
+        reported plant total.
         """
     )
 
