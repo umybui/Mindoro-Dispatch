@@ -4889,7 +4889,7 @@ st.caption(
 )
 
 # -----------------------------------------------------
-# AVAILABLE CAPACITY
+# CAPACITY REALIZATION BY PLANT
 # -----------------------------------------------------
 
 dependable_capacity_unit = (
@@ -4901,19 +4901,22 @@ dependable_capacity_unit = (
         )
     ]
     .groupby(
-        ["Plant","Unit"],
+        ["Plant", "Unit"],
         as_index=False
     )
     .agg(
-        DependableMW=("Value","max")
+        DependableMW=("Value", "max")
     )
 )
 
 dependable_capacity_tbl = (
     dependable_capacity_unit
-    .groupby("Plant", as_index=False)
+    .groupby(
+        "Plant",
+        as_index=False
+    )
     .agg(
-        DependableMW=("DependableMW","sum")
+        DependableMW=("DependableMW", "sum")
     )
 )
 
@@ -4923,7 +4926,10 @@ dependable_capacity_tbl = (
 
 asset_perf = (
     generation
-    .groupby("Plant", as_index=False)
+    .groupby(
+        "Plant",
+        as_index=False
+    )
     .agg(
         AvgMW=("Value", "mean"),
         MaxObservedMW=("Value", "max"),
@@ -5045,12 +5051,19 @@ asset_perf = asset_perf.sort_values(
 )
 
 # -----------------------------------------------------
-# SCENARIO FILTER
-# (CHART ONLY)
+# PLANT CAPABILITY SCENARIO
 # -----------------------------------------------------
 
 st.markdown(
     "##### Plant Capability Scenario"
+)
+
+st.caption(
+    """
+    Exclude retired or unavailable units to evaluate
+    plant capability realization under an adjusted
+    fleet configuration.
+    """
 )
 
 dependable_capacity_unit["PlantUnit"] = (
@@ -5060,7 +5073,7 @@ dependable_capacity_unit["PlantUnit"] = (
 )
 
 removed_units = st.multiselect(
-    "Exclude retired or unavailable units from chart",
+    "Exclude Units",
     options=sorted(
         dependable_capacity_unit["PlantUnit"].tolist()
     ),
@@ -5088,7 +5101,10 @@ scenario_dependable = (
 
 asset_perf_chart = (
     generation
-    .groupby("Plant", as_index=False)
+    .groupby(
+        "Plant",
+        as_index=False
+    )
     .agg(
         AvgMW=("Value", "mean"),
         MaxObservedMW=("Value", "max"),
@@ -5096,12 +5112,17 @@ asset_perf_chart = (
     )
 )
 
-asset_perf_chart = (
-    asset_perf_chart.merge(
-        scenario_dependable,
-        on="Plant",
-        how="left"
-    )
+asset_perf_chart = asset_perf_chart.merge(
+    scenario_dependable,
+    on="Plant",
+    how="left"
+)
+
+asset_perf_chart["UtilizationFactor %"] = (
+    asset_perf_chart["AvgMW"]
+    /
+    asset_perf_chart["DependableMW"]
+    * 100
 )
 
 asset_perf_chart["CapabilityRealization %"] = (
@@ -5123,12 +5144,43 @@ asset_perf_chart["Risk Flag"] = (
     )
 )
 
+asset_perf_chart["Remarks"] = (
+    asset_perf_chart.apply(
+        asset_remark,
+        axis=1
+    )
+)
+
 asset_perf_chart = (
     asset_perf_chart.sort_values(
         "CapabilityRealization %",
         ascending=True
     )
 )
+
+# -----------------------------------------------------
+# COMPARISON METRICS
+# -----------------------------------------------------
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.metric(
+        "Historical Capacity",
+        f"{asset_perf['DependableMW'].sum():,.2f} MW"
+    )
+
+with c2:
+    st.metric(
+        "Scenario Capacity",
+        f"{asset_perf_chart['DependableMW'].sum():,.2f} MW"
+    )
+
+with c3:
+    st.metric(
+        "Capacity Removed",
+        f"{asset_perf['DependableMW'].sum() - asset_perf_chart['DependableMW'].sum():,.2f} MW"
+    )
 
 # -----------------------------------------------------
 # CHART
@@ -5176,7 +5228,7 @@ fig_asset.add_vline(
 )
 
 fig_asset.update_layout(
-    title="Capability Realization by Plant",
+    title="Capability Realization by Plant (Scenario)",
     xaxis_title="Max Observed MW / Dependable MW (%)",
     yaxis_title="Plant",
     height=650,
@@ -5189,11 +5241,11 @@ st.plotly_chart(
 )
 
 # -----------------------------------------------------
-# TABLE
+# HISTORICAL TABLE
 # -----------------------------------------------------
 
 with st.expander(
-    "View Plant Asset Performance Table",
+    "View Historical Plant Asset Performance Table",
     expanded=False
 ):
     st.dataframe(
@@ -5213,6 +5265,30 @@ with st.expander(
         hide_index=True
     )
 
+# -----------------------------------------------------
+# SCENARIO TABLE
+# -----------------------------------------------------
+
+with st.expander(
+    "View Scenario Plant Asset Performance Table",
+    expanded=False
+):
+    st.dataframe(
+        asset_perf_chart[
+            [
+                "Plant",
+                "DependableMW",
+                "AvgMW",
+                "MaxObservedMW",
+                "UtilizationFactor %",
+                "CapabilityRealization %",
+                "Risk Flag",
+                "Remarks"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
 
 # =====================================================
 # UNIT CAPABILITY REALIZATION
