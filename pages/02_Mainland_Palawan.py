@@ -4892,7 +4892,7 @@ st.caption(
 # AVAILABLE CAPACITY
 # -----------------------------------------------------
 
-dependable_capacity_tbl = (
+dependable_capacity_unit = (
     capacity_data[
         capacity_data["Attribute"]
         .str.contains(
@@ -4910,7 +4910,7 @@ dependable_capacity_tbl = (
 )
 
 dependable_capacity_tbl = (
-    dependable_capacity_tbl
+    dependable_capacity_unit
     .groupby("Plant", as_index=False)
     .agg(
         DependableMW=("DependableMW","sum")
@@ -4956,7 +4956,7 @@ asset_perf["CapabilityRealization %"] = (
     asset_perf["MaxObservedMW"]
     /
     asset_perf["DependableMW"]
-    *100
+    * 100
 )
 
 asset_perf.loc[
@@ -5045,6 +5045,92 @@ asset_perf = asset_perf.sort_values(
 )
 
 # -----------------------------------------------------
+# SCENARIO FILTER
+# (CHART ONLY)
+# -----------------------------------------------------
+
+st.markdown(
+    "##### Plant Capability Scenario"
+)
+
+dependable_capacity_unit["PlantUnit"] = (
+    dependable_capacity_unit["Plant"]
+    + " | "
+    + dependable_capacity_unit["Unit"].astype(str)
+)
+
+removed_units = st.multiselect(
+    "Exclude retired or unavailable units from chart",
+    options=sorted(
+        dependable_capacity_unit["PlantUnit"].tolist()
+    ),
+    default=[],
+    key="asset_scenario_units"
+)
+
+scenario_units = (
+    dependable_capacity_unit[
+        ~dependable_capacity_unit["PlantUnit"]
+        .isin(removed_units)
+    ]
+)
+
+scenario_dependable = (
+    scenario_units
+    .groupby(
+        "Plant",
+        as_index=False
+    )
+    .agg(
+        DependableMW=("DependableMW", "sum")
+    )
+)
+
+asset_perf_chart = (
+    generation
+    .groupby("Plant", as_index=False)
+    .agg(
+        AvgMW=("Value", "mean"),
+        MaxObservedMW=("Value", "max"),
+        EnergyMWh=("Value", "sum")
+    )
+)
+
+asset_perf_chart = (
+    asset_perf_chart.merge(
+        scenario_dependable,
+        on="Plant",
+        how="left"
+    )
+)
+
+asset_perf_chart["CapabilityRealization %"] = (
+    asset_perf_chart["MaxObservedMW"]
+    /
+    asset_perf_chart["DependableMW"]
+    * 100
+)
+
+asset_perf_chart.loc[
+    asset_perf_chart["DependableMW"] <= 0,
+    "CapabilityRealization %"
+] = None
+
+asset_perf_chart["Risk Flag"] = (
+    asset_perf_chart.apply(
+        asset_flag,
+        axis=1
+    )
+)
+
+asset_perf_chart = (
+    asset_perf_chart.sort_values(
+        "CapabilityRealization %",
+        ascending=True
+    )
+)
+
+# -----------------------------------------------------
 # CHART
 # -----------------------------------------------------
 
@@ -5058,10 +5144,10 @@ asset_color_map = {
 
 fig_asset = go.Figure()
 
-for flag in asset_perf["Risk Flag"].unique():
+for flag in asset_perf_chart["Risk Flag"].unique():
 
-    temp = asset_perf[
-        asset_perf["Risk Flag"] == flag
+    temp = asset_perf_chart[
+        asset_perf_chart["Risk Flag"] == flag
     ]
 
     fig_asset.add_trace(
@@ -5126,6 +5212,7 @@ with st.expander(
         use_container_width=True,
         hide_index=True
     )
+
 
 # =====================================================
 # UNIT CAPABILITY REALIZATION
