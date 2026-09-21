@@ -5102,6 +5102,31 @@ st.plotly_chart(
     use_container_width=True
 )
 
+# -----------------------------------------------------
+# TABLE
+# -----------------------------------------------------
+
+with st.expander(
+    "View Plant Asset Performance Table",
+    expanded=False
+):
+    st.dataframe(
+        asset_perf[
+            [
+                "Plant",
+                "DependableMW",
+                "AvgMW",
+                "MaxObservedMW",
+                "UtilizationFactor %",
+                "CapabilityRealization %",
+                "Risk Flag",
+                "Remarks"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
+
 # =====================================================
 # UNIT CAPABILITY REALIZATION
 # =====================================================
@@ -5337,35 +5362,6 @@ else:
     )
     
     # -------------------------------------------------
-    # TABLE
-    # -------------------------------------------------
-
-    with st.expander(
-        "View Unit Capability Realization Table",
-        expanded=False
-    ):
-        st.dataframe(
-            unit_perf[
-                [
-                    "Plant",
-                    "Unit",
-                    "DependableMW",
-                    "AvgMW",
-                    "MaxObservedMW",
-                    "OperatingHours",
-                    "HoursAbove80Pct",
-                    "UtilizationFactor %",
-                    "CapabilityRealization %",
-                    "SustainedCapability %",
-                    "Risk Flag",
-                    "Remarks"
-                ]
-            ],
-            use_container_width=True,
-            hide_index=True
-        )
-
-    # -------------------------------------------------
     # CHART
     # -------------------------------------------------
 
@@ -5427,28 +5423,32 @@ else:
         use_container_width=True
     )
 
-# -----------------------------------------------------
-# TABLE
-# -----------------------------------------------------
+     # -------------------------------------------------
+    # TABLE
+    # -------------------------------------------------
 
-with st.expander(
-    "View Plant Asset Performance Table",
-    expanded=False
-):
-    st.dataframe(
-        asset_perf[
-            [
-                "Plant",
-                "DependableMW",
-                "AvgMW",
-                "MaxObservedMW",
-                "UtilizationFactor %",
-                "CapabilityRealization %",
-                "Risk Flag",
-                "Remarks"
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True
-    )
+    with st.expander(
+        "View Unit Capability Realization Table",
+        expanded=False
+    ):
+        st.dataframe(
+            unit_perf[
+                [
+                    "Plant",
+                    "Unit",
+                    "DependableMW",
+                    "AvgMW",
+                    "MaxObservedMW",
+                    "OperatingHours",
+                    "HoursAbove80Pct",
+                    "UtilizationFactor %",
+                    "CapabilityRealization %",
+                    "SustainedCapability %",
+                    "Risk Flag",
+                    "Remarks"
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True
+        )
 
