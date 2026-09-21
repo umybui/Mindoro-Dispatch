@@ -4739,6 +4739,30 @@ st.caption(
     """
 )
 
+check_cap = (
+    capacity_data[
+        capacity_data["Attribute"]
+        .str.contains(
+            "DEPENDABLE CAPACITY",
+            case=False,
+            na=False
+        )
+    ]
+    .groupby(["Plant","Unit"], as_index=False)
+    .agg(
+        DependableMW=("Value","max")
+    )
+    .sort_values(
+        ["Plant","Unit"]
+    )
+)
+
+st.dataframe(
+    check_cap,
+    use_container_width=True
+)
+
+
 # -----------------------------------------------------
 # AVAILABLE CAPACITY
 # -----------------------------------------------------
