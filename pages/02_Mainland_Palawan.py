@@ -5045,31 +5045,6 @@ asset_perf = asset_perf.sort_values(
 )
 
 # -----------------------------------------------------
-# TABLE
-# -----------------------------------------------------
-
-with st.expander(
-    "View Plant Asset Performance Table",
-    expanded=False
-):
-    st.dataframe(
-        asset_perf[
-            [
-                "Plant",
-                "DependableMW",
-                "AvgMW",
-                "MaxObservedMW",
-                "UtilizationFactor %",
-                "CapabilityRealization %",
-                "Risk Flag",
-                "Remarks"
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True
-    )
-
-# -----------------------------------------------------
 # CHART
 # -----------------------------------------------------
 
@@ -5451,3 +5426,29 @@ else:
         fig_unit,
         use_container_width=True
     )
+
+# -----------------------------------------------------
+# TABLE
+# -----------------------------------------------------
+
+with st.expander(
+    "View Plant Asset Performance Table",
+    expanded=False
+):
+    st.dataframe(
+        asset_perf[
+            [
+                "Plant",
+                "DependableMW",
+                "AvgMW",
+                "MaxObservedMW",
+                "UtilizationFactor %",
+                "CapabilityRealization %",
+                "Risk Flag",
+                "Remarks"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
+
